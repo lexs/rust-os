@@ -9,12 +9,14 @@ mod vga;
 mod gdt;
 mod idt;
 mod io;
+mod timer;
 mod util;
 
 #[no_mangle]
 pub extern fn kernel_main() {
     gdt::init();
     idt::init();
+    timer::init(50);
 
     vga::clear_screen();
     vga::puts("Hello world! ");

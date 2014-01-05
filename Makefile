@@ -21,7 +21,7 @@ run: os.bin
 $(LCORE):
 	$(RUSTC) $(RUSTCFLAGS) rust-core/core/lib.rs --out-dir .
 
-main.o: vga.rs gdt.rs idt.rs
+main.o: vga.rs gdt.rs idt.rs timer.rs
 
 main.rs: $(LCORE)
 

@@ -3,6 +3,7 @@ use core::mem::size_of;
 
 use vga;
 use io;
+use util;
 use util::range;
 
 static IDT_SIZE: uint = 256;
@@ -69,49 +70,20 @@ static mut table: IdtPtr = IdtPtr {
     base: 0 as *IdtTable
 };
 
+struct Handler {
+    f: extern "Rust" fn(regs: &Registers)
+}
+
+fn dummy_isr_handler(regs: &Registers) {}
+static mut interrupt_handlers: [Handler, ..IDT_SIZE] = [
+    Handler { f: dummy_isr_handler }, ..IDT_SIZE
+];
+/*static mut interrupt_handlers: ['static |&Registers|, ..IDT_SIZE] = [
+    dummy_isr_handler, ..IDT_SIZE
+];*/
+
 // Defined in handlers.s
 extern { static isr_handler_array: [u32, ..IDT_SIZE]; }
-
-fn convert(value: u32, f: |char|) {
-    let mut result: [u8, ..20] = ['0' as u8, ..20];
-
-    let mut n = value;
-    if (n == 0) {
-        f('0');
-    } else if (n < 0) {
-        n = -n;
-        f('-');
-    }
-
-    let mut length = 0;
-    while n > 0 {
-        result[length] = '0' as u8 + (n % 10) as u8;
-        n /= 10;
-        length += 1;
-    }
-
-    while (length > 0) {
-        f(result[length - 1] as char);
-        length -= 1;
-    }
-}
-
-#[no_mangle]
-pub extern fn isr_handler(regs: Registers) {
-    if regs.int_no >= 32 && regs.int_no <= 47 {
-        let irq = regs.int_no - 32;
-        if irq <= 7 {
-            io::out(0x20, 0x20); // Master
-        } else {
-            io::out(0xA0, 0x20); // Slave
-        }
-    }
-    vga::puts("Interrupt! ");
-    convert(regs.int_no, |c| vga::putch(c) );
-    vga::puts(", error: ");
-    convert(regs.err_code, |c| vga::putch(c) );
-    vga::puts("\n");
-}
 
 pub fn init() {
     // Remap the irq table.
@@ -135,6 +107,38 @@ pub fn init() {
         idt_flush(&table);
         idt_enable();
     }
+}
+
+pub fn register_irq_handler(which: uint, f: extern "Rust" fn(regs: &Registers)) {
+    register_isr_handler(which + 32, f);
+}
+
+pub fn register_isr_handler(which: uint, f: extern "Rust" fn(regs: &Registers)) {
+    unsafe {
+        interrupt_handlers[which] = Handler { f: f };
+    }
+}
+
+#[no_mangle]
+pub extern fn isr_handler(regs: Registers) {
+    if regs.int_no >= 32 && regs.int_no <= 47 {
+        let irq = regs.int_no - 32;
+        if irq <= 7 {
+            io::out(0x20, 0x20); // Master
+        }
+        io::out(0xA0, 0x20); // Slave
+    }
+
+    unsafe {
+        let f = interrupt_handlers[regs.int_no].f;
+        f(&regs);
+    }
+
+    /*vga::puts("Interrupt! ");
+    util::convert(regs.int_no, |c| vga::putch(c) );
+    vga::puts(", error: ");
+    util::convert(regs.err_code, |c| vga::putch(c) );
+    vga::puts("\n");*/
 }
 
 unsafe fn idt_enable() {
