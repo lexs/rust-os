@@ -16,7 +16,7 @@ mod util;
 pub extern fn kernel_main() {
     gdt::init();
     idt::init();
-    timer::init(50);
+    timer::init(100);
 
     vga::clear_screen();
     vga::puts("Hello world! ");
@@ -24,7 +24,7 @@ pub extern fn kernel_main() {
     let chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ ";
     let mut current: uint = 0;
     loop {
-        sleep();
+        timer::sleep(1000);
         vga::putch(chars[current] as char);
         current = (current + 1) % chars.len();
     }
@@ -35,12 +35,4 @@ pub extern fn kernel_main() {
 pub extern fn isr_handler(regs: idt::Registers) {
     // TODO: Why?
     idt::isr_handler(regs);
-}
-
-fn sleep() {
-    let mut i: uint = 0;
-    while i < 10000000 {
-        i += 1;
-        unsafe { asm!("nop"); }
-    }
 }

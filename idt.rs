@@ -74,7 +74,19 @@ struct Handler {
     f: extern "Rust" fn(regs: &Registers)
 }
 
-fn dummy_isr_handler(regs: &Registers) {}
+static EXCEPTIONS: [&'static str, ..3] = [
+    "Division By Zero",
+    "Debug Exception",
+    "Non Maskable Interrupt Exception"
+];
+
+fn dummy_isr_handler(regs: &Registers) {
+    vga::puts("Unhandled interrupt: ");
+    util::convert(regs.int_no, |c| vga::putch(c));
+    vga::puts(", error: ");
+    util::convert(regs.err_code, |c| vga::putch(c));
+    vga::puts("\n");
+}
 static mut interrupt_handlers: [Handler, ..IDT_SIZE] = [
     Handler { f: dummy_isr_handler }, ..IDT_SIZE
 ];
@@ -121,8 +133,18 @@ pub fn register_isr_handler(which: uint, f: extern "Rust" fn(regs: &Registers)) 
 
 #[no_mangle]
 pub extern fn isr_handler(regs: Registers) {
-    if regs.int_no >= 32 && regs.int_no <= 47 {
-        let irq = regs.int_no - 32;
+    let which = regs.int_no;
+
+    if which < 32 {
+        if which < EXCEPTIONS.len() as u32 {
+            vga::puts(EXCEPTIONS[which]);
+        } else {
+            dummy_isr_handler(&regs);
+        }
+        vga::putch('\n');
+        loop {}
+    } else if which >= 32 && which <= 47 {
+        let irq = which - 32;
         if irq <= 7 {
             io::out(0x20, 0x20); // Master
         }
@@ -130,15 +152,9 @@ pub extern fn isr_handler(regs: Registers) {
     }
 
     unsafe {
-        let f = interrupt_handlers[regs.int_no].f;
+        let f = interrupt_handlers[which].f;
         f(&regs);
     }
-
-    /*vga::puts("Interrupt! ");
-    util::convert(regs.int_no, |c| vga::putch(c) );
-    vga::puts(", error: ");
-    util::convert(regs.err_code, |c| vga::putch(c) );
-    vga::puts("\n");*/
 }
 
 unsafe fn idt_enable() {
