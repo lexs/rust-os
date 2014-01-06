@@ -81,18 +81,32 @@ pub fn move_cursor(x: uint, y: uint) {
 unsafe fn do_putch(c: char) {
     match c {
         '\n' => newline(),
+        '\t' => unsafe { forward_cursor(4 - (cursor_x + 4) % 4); },
+        '\u0008' => unsafe { erase(); },
         _ => {
             (*SCREEN)[cursor_y][cursor_x] = Character::make(c, White, Black);
-            forward_cursor();
+            forward_cursor(1);
         }
     }
 }
 
-unsafe fn forward_cursor() {
-    cursor_x += 1;
+unsafe fn erase() {
+    if cursor_x != 0 {
+        cursor_x -= 1;
+    } else if cursor_y != 0 {
+        cursor_x = COLS - 1;
+        cursor_y -= 1;
+    }
 
-    if cursor_x >= COLS {
-        newline();
+    (*SCREEN)[cursor_y][cursor_x] = Character::make(' ', White, Black);
+}
+
+unsafe fn forward_cursor(steps: uint) {
+    cursor_x += steps;
+
+    while cursor_x >= COLS {
+        cursor_x -= COLS;
+        cursor_y += 1;
     }
 }
 

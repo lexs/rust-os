@@ -7,7 +7,7 @@ use util;
 static mut tick: u32 = 0;
 
 pub fn init(frequency: u32) {
-    irq::register_handler(0, callback);
+    irq::register_handler(0, timer_handler);
 
     let divisor = 1193180 / frequency;
 
@@ -30,11 +30,11 @@ pub fn sleep(duration: u32) {
     }
 }
 
-fn callback(regs: &idt::Registers) {
+fn timer_handler(regs: &idt::Registers) {
     unsafe {
         tick += 1;
         if tick % 100 == 0 {
-            vga::puts("\nOne second has passed\n");
+            //vga::puts("\nOne second has passed\n");
         }
     }
 }
