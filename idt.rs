@@ -98,18 +98,6 @@ static mut interrupt_handlers: [Handler, ..IDT_SIZE] = [
 extern { static isr_handler_array: [u32, ..IDT_SIZE]; }
 
 pub fn init() {
-    // Remap the irq table.
-    io::out(0x20, 0x11);
-    io::out(0xA0, 0x11);
-    io::out(0x21, 0x20);
-    io::out(0xA1, 0x28);
-    io::out(0x21, 0x04);
-    io::out(0xA1, 0x02);
-    io::out(0x21, 0x01);
-    io::out(0xA1, 0x01);
-    io::out(0x21, 0x0);
-    io::out(0xA1, 0x0);
-
     unsafe {
         range(0, IDT_SIZE, |i| {
             entries[i] = IdtEntry::new(isr_handler_array[i], 0x08, 0x8E);
@@ -119,10 +107,6 @@ pub fn init() {
         idt_flush(&table);
         idt_enable();
     }
-}
-
-pub fn register_irq_handler(which: uint, f: extern "Rust" fn(regs: &Registers)) {
-    register_isr_handler(which + 32, f);
 }
 
 pub fn register_isr_handler(which: uint, f: extern "Rust" fn(regs: &Registers)) {
@@ -146,15 +130,13 @@ pub extern fn isr_handler(regs: Registers) {
     } else if which >= 32 && which <= 47 {
         let irq = which - 32;
         if irq <= 7 {
-            io::out(0x20, 0x20); // Master
+            io::write_port(0x20, 0x20); // Master
         }
-        io::out(0xA0, 0x20); // Slave
+        io::write_port(0xA0, 0x20); // Slave
     }
 
-    unsafe {
-        let f = interrupt_handlers[which].f;
-        f(&regs);
-    }
+    let f = unsafe { interrupt_handlers[which].f };
+    f(&regs);
 }
 
 unsafe fn idt_enable() {

@@ -1,23 +1,24 @@
 use io;
 use idt;
+use irq;
 use vga;
 use util;
 
 static mut tick: u32 = 0;
 
 pub fn init(frequency: u32) {
-    idt::register_irq_handler(0, callback);
+    irq::register_handler(0, callback);
 
     let divisor = 1193180 / frequency;
 
-    io::out(0x43, 0x36);
+    io::write_port(0x43, 0x36);
 
     let low = (divisor & 0xff) as u8;
     let high = (divisor >> 8 & 0xff) as u8;
 
     // Send the frequency divisor.
-    io::out(0x40, low);
-    io::out(0x40, high);
+    io::write_port(0x40, low);
+    io::write_port(0x40, high);
 }
 
 pub fn sleep(duration: u32) {

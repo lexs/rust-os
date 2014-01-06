@@ -22,14 +22,14 @@ isr_common_stub:
 
     popa                     ; Pops edi,esi,ebp...
     add esp, 8     ; Cleans up the pushed error code and pushed ISR number
-    sti
+    ;sti
     iret           ; pops 5 things at once: CS, EIP, EFLAGS, SS, and ESP
 
 %macro ISR_HANDLER 1
     global _isr_handler_%1
 
     _isr_handler_%1:
-        cli
+        ;cli
         push dword 0 ; push a dummy error code
         push dword %1
         jmp isr_common_stub
@@ -39,7 +39,7 @@ isr_common_stub:
     global _isr_handler_%1
 
     _isr_handler_%1:
-        cli
+        ;cli
         push dword %1
         jmp isr_common_stub
 %endmacro

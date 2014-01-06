@@ -104,8 +104,8 @@ unsafe fn newline() {
 unsafe fn update_cursor() {
     let position = cursor_y * COLS + cursor_x;
 
-    io::out(0x3D4, 0x0F);
-    io::out(0x3D5, position as u8);
-    io::out(0x3D4, 0x0E);
-    io::out(0x3D5, (position >> 8) as u8);
+    io::write_port(0x3D4, 0x0F);
+    io::write_port(0x3D5, position as u8);
+    io::write_port(0x3D4, 0x0E);
+    io::write_port(0x3D5, (position >> 8) as u8);
 }

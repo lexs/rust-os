@@ -7,6 +7,7 @@ use core::container::Container;
 
 mod vga;
 mod gdt;
+mod irq;
 mod idt;
 mod io;
 mod timer;
@@ -15,6 +16,7 @@ mod util;
 #[no_mangle]
 pub extern fn kernel_main() {
     gdt::init();
+    irq::init();
     idt::init();
     timer::init(100);
 
