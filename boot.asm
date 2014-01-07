@@ -1,8 +1,8 @@
 ; Multiboot constants
-MB_PAGE_ALIGN   equ  1<<0                               ; align loaded modules on page boundaries
-MB_MEMORY_INFO  equ  1<<1                               ; provide memory map
-MB_FLAGS        equ  MB_PAGE_ALIGN | MB_MEMORY_INFO     ; this is the Multiboot 'flag' field
-MB_MAGIC        equ  0x1BADB002                         ; 'magic number' lets bootloader find the header
+%define MB_PAGE_ALIGN 1<<0                          ; align loaded modules on page boundaries
+%define MB_MEMORY_INFO 1<<1                         ; provide memory map
+%define MB_FLAGS (MB_PAGE_ALIGN | MB_MEMORY_INFO)   ; this is the Multiboot 'flag' field
+%define MB_MAGIC 0x1BADB002                         ; 'magic number' lets bootloader find the header
  
 ; Multiboot header
 section .multiboot
