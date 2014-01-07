@@ -40,7 +40,7 @@ pub static ROWS: uint = 25;
 pub static COLS: uint = 80;
 
 type Screen = [[Character, ..COLS], ..ROWS];
-static SCREEN: *mut Screen = 0xb8000 as *mut Screen;
+static screen: *mut Screen = 0xb8000 as *mut Screen;
 
 static mut cursor_x: uint = 0;
 static mut cursor_y: uint = 0;
@@ -64,7 +64,7 @@ pub fn clear_screen() {
     range(0, COLS, |x| {
         range(0, ROWS, |y| {
             unsafe {
-                (*SCREEN)[y][x] = Character::make(' ', White, Black);
+                (*screen)[y][x] = Character::make(' ', White, Black);
             }
         })
     });
@@ -84,7 +84,7 @@ unsafe fn do_putch(c: char) {
         '\t' => unsafe { forward_cursor(4 - (cursor_x + 4) % 4); },
         '\u0008' => unsafe { erase(); },
         _ => {
-            (*SCREEN)[cursor_y][cursor_x] = Character::make(c, White, Black);
+            (*screen)[cursor_y][cursor_x] = Character::make(c, White, Black);
             forward_cursor(1);
         }
     }
@@ -98,7 +98,7 @@ unsafe fn erase() {
         cursor_y -= 1;
     }
 
-    (*SCREEN)[cursor_y][cursor_x] = Character::make(' ', White, Black);
+    (*screen)[cursor_y][cursor_x] = Character::make(' ', White, Black);
 }
 
 unsafe fn forward_cursor(steps: uint) {
