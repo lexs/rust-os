@@ -10,7 +10,7 @@ LCORE=libcore-2e829c2f-0.0.rlib
 
 QEMU=qemu-system-i386
 
-.SUFFIXES: .o .rs .s .bc
+.SUFFIXES: .o .rs .asm .bc
 
 os.bin: boot.o runtime.o main.o core.o handlers.o
 	$(LD) -T linker.ld -o os.bin boot.o runtime.o main.o core.o handlers.o
@@ -26,7 +26,7 @@ main.o: $(LCORE) vga.rs gdt.rs irq.rs idt.rs timer.rs keyboard.rs
 core.o: $(LCORE)
 	ar -x $(LCORE) core.o
 
-.s.o:
+.asm.o:
 	$(NASM) -f elf32 -Wall -o $@ $<
 
 .rs.o:
