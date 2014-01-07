@@ -21,27 +21,16 @@ run: os.bin
 $(LCORE):
 	$(RUSTC) $(RUSTCFLAGS) rust-core/core/lib.rs --out-dir .
 
-main.o: vga.rs gdt.rs irq.rs idt.rs timer.rs keyboard.rs
-
-main.rs: $(LCORE)
+main.o: $(LCORE) vga.rs gdt.rs irq.rs idt.rs timer.rs keyboard.rs
 
 core.o: $(LCORE)
 	ar -x $(LCORE) core.o
 
-support.bc:
-	$(RUSTC) $(RUSTCFLAGS) --lib --emit-llvm --passes inline rust-core/support.rs --out-dir .
-
-.bc.o:
-	clang -O2 -ffreestanding -target $(TARGET) -o $@ -c $<
-
 .s.o:
-	$(NASM) -f elf -o $@ $<
+	$(NASM) -f elf32 -Wall -o $@ $<
 
-.rs.bc:
-	$(RUSTC) $(RUSTCFLAGS) --lib --emit-llvm $< -L .
-
-#.rs.o:
-#	$(RUSTC) $(RUSTCFLAGS) --lib -o $@ -c $< -L rust-core
+.rs.o:
+	$(RUSTC) $(RUSTCFLAGS) --lib -o $@ -c $< -L .
 
 clean:
 	rm *.{o,bin,bc,rlib}
