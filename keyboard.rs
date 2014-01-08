@@ -3,9 +3,9 @@ use idt;
 use io;
 use vga;
 
-static MAPPING: &'static str = "\
+static KEYMAP: &'static str = "\
 \x00\x1B1234567890-=\x08\tqwertyuiop[]\n?asdfghjkl;'`?\\zxcvbnm,./?*? ?????????????789-456+1230.?????";
-static MAPPING_SHIFT: &'static str = "\
+static KEYMAP_SHIFTED: &'static str = "\
 \x00\x1B!@#$%^&*()_+\x08\tQWERTYUIOP{}\n?ASDFGHJKL:\"~?|ZXCVBNM<>??*? ?????????????789-456+1230.?????";
 
 static LEFT_SHIFT: u8 = 0x2a;
@@ -30,34 +30,36 @@ fn keyboard_handler(regs: &idt::Registers) {
     let scancode: u8 = io::read_port(0x60);
 
     // Top bit means key released
-    if scancode & 0x80 != 0{
-        let code = scancode & !0x80;
-        match code {
-            LEFT_SHIFT | RIGHT_SHIFT => unsafe { shifted = false; },
-            _ => { key_up(scancode); }
-        }
+    if scancode & 0x80 != 0 {
+        key_up(!0x80);
     } else {
-        match scancode {
-            LEFT_SHIFT | RIGHT_SHIFT => unsafe { shifted = true; },
-            CAPS_LOCK => unsafe { caps_lock = !caps_lock; },
-            _ => { key_down(scancode); }
-        }
-        
+        key_down(scancode);
     }
 }
 
 fn key_up(scancode: u8) {
-
+    match scancode {
+        LEFT_SHIFT | RIGHT_SHIFT => unsafe { shifted = false; },
+        _ => {}
+    }
 }
 
 fn key_down(scancode: u8) {
-    if scancode > MAPPING.len() as u8 { return; }
+    match scancode {
+        LEFT_SHIFT | RIGHT_SHIFT => unsafe { shifted = true; },
+        CAPS_LOCK => unsafe { caps_lock = !caps_lock; },
+        _ => { write(scancode); }
+    }
+}
+
+fn write(scancode: u8) {
+    if scancode > KEYMAP.len() as u8 { return; }
 
     let c: char = unsafe {
         if shifted ^ caps_lock {
-            MAPPING_SHIFT[scancode] as char
+            KEYMAP_SHIFTED[scancode] as char
         } else {
-            MAPPING[scancode] as char
+            KEYMAP[scancode] as char
         }
     };
 
