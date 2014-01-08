@@ -4,12 +4,16 @@ use irq;
 use vga;
 use util;
 
+use core2::intrinsics::{volatile_load, volatile_store};
+
+static HZ: u32 = 100;
+
 static mut tick: u32 = 0;
 
-pub fn init(frequency: u32) {
+pub fn init() {
     irq::register_handler(0, timer_handler);
 
-    let divisor = 1193180 / frequency;
+    let divisor = 1193180 / HZ;
 
     io::write_port(0x43, 0x36);
 
@@ -21,20 +25,30 @@ pub fn init(frequency: u32) {
     io::write_port(0x40, high);
 }
 
+#[inline(always)]
+pub fn read_ticks() -> u32 {
+    unsafe { volatile_load(&tick) }
+}
+
+fn increment_ticks() -> u32 {
+    unsafe {
+        let current = volatile_load(&tick) + 1;
+        volatile_store(&mut tick, current);
+        current
+    }
+}
+
 pub fn sleep(duration: u32) {
     unsafe {
-        let target = tick + duration / 100;
-        while (tick < target) {
-            asm!("nop"); // Please don't optimize me away
-        }
+        let target = read_ticks() + duration / 100;
+        while (read_ticks() < target) {}
     }
 }
 
 fn timer_handler(regs: &idt::Registers) {
     unsafe {
-        tick += 1;
-        if tick % 100 == 0 {
-            //vga::puts("\nOne second has passed\n");
+        if increment_ticks() % HZ == 0 {
+            vga::puts("\nOne second has passed\n");
         }
     }
 }

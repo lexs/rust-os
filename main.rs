@@ -14,17 +14,19 @@ mod timer;
 mod keyboard;
 mod util;
 
+mod core2;
+
 #[no_mangle]
 pub extern fn kernel_main() {
     gdt::init();
     irq::init();
     idt::init();
     keyboard::init();
-    timer::init(100);
+    timer::init();
 
     vga::clear_screen();
     vga::puts("Hello world! ");
-/*
+
     let chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ ";
     let mut current: uint = 0;
     loop {
@@ -32,7 +34,7 @@ pub extern fn kernel_main() {
         vga::putch(chars[current] as char);
         current = (current + 1) % chars.len();
     }
-*/
+
     loop {}
 }
 
