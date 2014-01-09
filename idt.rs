@@ -116,14 +116,14 @@ pub fn register_isr_handler(which: uint, f: extern "Rust" fn(regs: &Registers)) 
 }
 
 #[no_mangle]
-pub extern fn isr_handler(regs: Registers) {
+pub extern fn isr_handler(regs: &Registers) {
     let which = regs.int_no;
 
     if which < 32 {
         if which < EXCEPTIONS.len() as u32 {
             vga::puts(EXCEPTIONS[which]);
         } else {
-            dummy_isr_handler(&regs);
+            dummy_isr_handler(regs);
         }
         vga::putch('\n');
         loop {}
@@ -136,7 +136,7 @@ pub extern fn isr_handler(regs: Registers) {
     }
 
     let f = unsafe { interrupt_handlers[which].f };
-    f(&regs);
+    f(regs);
 }
 
 unsafe fn idt_enable() {

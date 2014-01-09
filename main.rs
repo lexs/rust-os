@@ -40,7 +40,7 @@ pub extern fn kernel_main() {
 
 
 #[no_mangle]
-pub extern fn isr_handler(regs: idt::Registers) {
+pub extern fn isr_handler(regs: &idt::Registers) {
     // TODO: Why?
     idt::isr_handler(regs);
 }
