@@ -1,3 +1,5 @@
+use core::option::Option;
+
 use irq;
 use idt;
 use io;
@@ -19,6 +21,10 @@ static mut caps_lock: bool = false;
 
 pub fn init() {
     irq::register_handler(1, keyboard_handler);
+}
+
+pub fn getch() -> Option<u8> {
+    unsafe { keyboard_buffer.read() }
 }
 
 fn keyboard_handler(regs: &idt::Registers) {
@@ -55,13 +61,15 @@ fn key_down(scancode: u8) {
 fn write(scancode: u8) {
     if scancode > KEYMAP.len() as u8 { return; }
 
-    let c: char = unsafe {
+    let c: u8 = unsafe {
         if shifted ^ caps_lock {
-            KEYMAP_SHIFTED[scancode] as char
+            KEYMAP_SHIFTED[scancode]
         } else {
-            KEYMAP[scancode] as char
+            KEYMAP[scancode]
         }
     };
 
-    vga::putch(c);
+    unsafe { keyboard_buffer.write(c); }
+    vga::puts("wrote char");
+
 }
