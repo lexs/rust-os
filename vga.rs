@@ -1,5 +1,8 @@
 use core::container::Container;
 
+use core2::ptr::mut_offset;
+use core2::intrinsics::{volatile_load, volatile_store};
+
 use io;
 use util::range;
 
@@ -39,8 +42,7 @@ impl Character {
 pub static ROWS: uint = 25;
 pub static COLS: uint = 80;
 
-type Screen = [[Character, ..COLS], ..ROWS];
-static screen: *mut Screen = 0xb8000 as *mut Screen;
+static screen: *mut Character = 0xb8000 as *mut Character;
 
 static mut cursor_x: uint = 0;
 static mut cursor_y: uint = 0;
@@ -64,7 +66,7 @@ pub fn clear_screen() {
     range(0, COLS, |x| {
         range(0, ROWS, |y| {
             unsafe {
-                (*screen)[y][x] = Character::make(' ', White, Black);
+                write(y, x, Character::make(' ', White, Black));
             }
         })
     });
@@ -84,7 +86,7 @@ unsafe fn do_putch(c: char) {
         '\t' => unsafe { forward_cursor(4 - (cursor_x + 4) % 4); },
         '\u0008' => unsafe { erase(); },
         _ => {
-            (*screen)[cursor_y][cursor_x] = Character::make(c, White, Black);
+            write(cursor_y, cursor_x, Character::make(c, White, Black));
             forward_cursor(1);
         }
     }
@@ -98,7 +100,13 @@ unsafe fn erase() {
         cursor_y -= 1;
     }
 
-    (*screen)[cursor_y][cursor_x] = Character::make(' ', White, Black);
+    write(cursor_y, cursor_x, Character::make(' ', White, Black));
+}
+
+#[inline]
+unsafe fn write(y: uint, x: uint, c: Character) {
+    let offset = y * COLS + x;
+    volatile_store(mut_offset(screen, offset as int), c);
 }
 
 unsafe fn forward_cursor(steps: uint) {
