@@ -83,8 +83,8 @@ pub fn move_cursor(x: uint, y: uint) {
 unsafe fn do_putch(c: char) {
     match c {
         '\n' => newline(),
-        '\t' => unsafe { forward_cursor(4 - (cursor_x + 4) % 4); },
-        '\u0008' => unsafe { erase(); },
+        '\t' => unsafe { tab(); },
+        '\u0008' => unsafe { backspace(); },
         _ => {
             write(cursor_y, cursor_x, Character::make(c, White, Black));
             forward_cursor(1);
@@ -92,7 +92,11 @@ unsafe fn do_putch(c: char) {
     }
 }
 
-unsafe fn erase() {
+unsafe fn tab() {
+    forward_cursor(4 - (cursor_x + 4) % 4);
+}
+
+unsafe fn backspace() {
     if cursor_x != 0 {
         cursor_x -= 1;
     } else if cursor_y != 0 {
