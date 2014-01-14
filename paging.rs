@@ -115,11 +115,18 @@ impl PageDirectory {
         let page_index = address / 4096;
         &mut (*table).pages[page_index % 1024]
     }
+
+    unsafe fn get_physical(&mut self, address: u32) -> u32 {
+        let page = self.get_page(address);
+        page.addr() + (address % 1024)
+    }
 }
 
 fn switch_page_directory(directory: *mut PageDirectory) {
     unsafe {
-        write_cr3(directory);
+        // FIXME This is not working for some reason, being optimized out?
+        //let address = (*directory).get_physical(directory as u32);
+        write_cr3(directory as u32);
         // Set the paging bit in CR0 to 1
         write_cr0(read_cr0() | 0x80000000);
     }
@@ -138,8 +145,9 @@ fn read_faulting_address() -> u32 {
     }
 }
 
-unsafe fn write_cr3(directory: *mut PageDirectory) {
-    asm!("mov $0, %cr3" :: "r"(&(*directory).tables));
+#[inline]
+unsafe fn write_cr3(value: u32) {
+    asm!("mov $0, %cr3" :: "r"(value) : "cr3");
 }
 
 unsafe fn read_cr0() -> u32 {
@@ -149,7 +157,7 @@ unsafe fn read_cr0() -> u32 {
 }
 
 unsafe fn write_cr0(value: u32) {
-    asm!("mov $0, %cr0" :: "r"(value));
+    asm!("mov $0, %cr0" :: "r"(value) : "cr0");
 }
 
 unsafe fn alloc_s<T>() -> *mut T {
