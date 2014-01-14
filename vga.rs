@@ -1,7 +1,7 @@
 use core::container::Container;
 
 use core2::ptr::mut_offset;
-use core2::intrinsics::{volatile_load, volatile_store};
+use core2::intrinsics::volatile_store;
 
 use io;
 use util::range;
@@ -84,8 +84,8 @@ pub fn move_cursor(x: uint, y: uint) {
 unsafe fn do_putch(c: char) {
     match c {
         '\n' => newline(),
-        '\t' => unsafe { tab(); },
-        '\u0008' => unsafe { backspace(); },
+        '\t' => tab(),
+        '\u0008' => backspace(),
         _ => {
             write(cursor_y, cursor_x, Character::make(c, White, Black));
             forward_cursor(1);

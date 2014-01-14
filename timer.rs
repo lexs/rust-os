@@ -2,7 +2,6 @@ use io;
 use idt;
 use irq;
 use vga;
-use util;
 
 use core2::intrinsics::{volatile_load, volatile_store};
 
@@ -39,16 +38,12 @@ fn increment_ticks() -> u32 {
 }
 
 pub fn sleep(duration: u32) {
-    unsafe {
-        let target = read_ticks() + duration / 100;
-        while (read_ticks() < target) {}
-    }
+    let target = read_ticks() + duration / 100;
+    while (read_ticks() < target) {}
 }
 
 fn timer_handler(regs: &idt::Registers) {
-    unsafe {
-        if increment_ticks() % HZ == 0 {
-            vga::puts("\nOne second has passed\n");
-        }
+    if increment_ticks() % HZ == 0 {
+        vga::puts("\nOne second has passed\n");
     }
 }

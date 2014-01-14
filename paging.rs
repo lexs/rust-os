@@ -49,7 +49,6 @@ fn page_fault(regs: &idt::Registers) {
     let rw = regs.err_code & 0x2 == 0;
     let user = regs.err_code & 0x4 == 0;
     let reserved = regs.err_code & 0x8 == 0;
-    let id = regs.err_code & 0x10 == 0;
 
     console::write_str("Page fault! ( ");
     if present { console::write_str("present "); }
