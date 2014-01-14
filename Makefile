@@ -23,7 +23,7 @@ run: os.bin
 $(LCORE):
 	$(RUSTC) $(RUSTCFLAGS) rust-core/core/lib.rs --out-dir .
 
-main.o: $(LCORE) util.rs io.rs vga.rs gdt.rs irq.rs idt.rs timer.rs keyboard.rs paging.rs console.rs
+main.o: $(LCORE) kernel.rs util.rs io.rs vga.rs gdt.rs irq.rs idt.rs timer.rs keyboard.rs paging.rs console.rs
 
 core.o: $(LCORE)
 	ar -x $(LCORE) core.o

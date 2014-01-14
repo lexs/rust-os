@@ -1,3 +1,5 @@
+use core::container::Container;
+
 use irq;
 use idt;
 use io;
