@@ -70,6 +70,7 @@ pub fn clear_screen() {
             }
         })
     });
+    move_cursor(0, 0);
 }
 
 pub fn move_cursor(x: uint, y: uint) {
