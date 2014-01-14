@@ -74,10 +74,28 @@ struct Handler {
     f: extern "Rust" fn(regs: &Registers)
 }
 
-static EXCEPTIONS: [&'static str, ..3] = [
-    "Division By Zero",
-    "Debug Exception",
-    "Non Maskable Interrupt Exception"
+static EXCEPTIONS: &'static [&'static str] = &[
+    "Divide-by-zero Error",
+    "Debug",
+    "Non-maskable Interrupt",
+    "Breakpoint",
+    "Overflow",
+    "Bound Range Exceeded",
+    "Invalid Opcode",
+    "Device Not Available",
+    "Double Fault",
+    "Coprocessor Segment Overrun",
+    "Invalid TSS",
+    "Segment Not Present",
+    "Stack-Segment Fault",
+    "General Protection Fault",
+    "Page Fault",
+    "Reserved",
+    "x87 Floating-Point Exception",
+    "Alignment Check",
+    "Machine Check",
+    "SIMD Floating-Point Exception",
+    "Virtualization Exception",
 ];
 
 fn dummy_isr_handler(regs: &Registers) {
@@ -87,6 +105,12 @@ fn dummy_isr_handler(regs: &Registers) {
     util::convert(regs.err_code, |c| vga::putch(c));
     vga::puts("\n");
 }
+
+fn exception_isr_handler(regs: &Registers) {
+    vga::puts(EXCEPTIONS[regs.int_no]);
+    loop {}
+}
+
 static mut interrupt_handlers: [Handler, ..IDT_SIZE] = [
     Handler { f: dummy_isr_handler }, ..IDT_SIZE
 ];
@@ -106,6 +130,11 @@ pub fn init() {
         table = IdtPtr::new(&entries);
         idt_flush(&table);
         idt_enable();
+
+        // Register default exception handlers
+        range(0, EXCEPTIONS.len(), |i| {
+            register_isr_handler(i, exception_isr_handler);
+        });
     }
 }
 
@@ -119,15 +148,8 @@ pub fn register_isr_handler(which: uint, f: extern "Rust" fn(regs: &Registers)) 
 pub extern fn isr_handler(regs: &Registers) {
     let which = regs.int_no;
 
-    if which < 32 {
-        if which < EXCEPTIONS.len() as u32 {
-            vga::puts(EXCEPTIONS[which]);
-        } else {
-            dummy_isr_handler(regs);
-        }
-        vga::putch('\n');
-        loop {}
-    } else if which >= 32 && which <= 47 {
+    // If this is a irq we need to eoi it
+    if which >= 32 && which <= 47 {
         let irq = which - 32;
         if irq <= 7 {
             io::write_port(0x20, 0x20); // Master

@@ -12,6 +12,8 @@ mod idt;
 mod io;
 mod timer;
 mod keyboard;
+mod paging;
+mod console;
 mod util;
 
 mod core2;
@@ -22,17 +24,26 @@ pub extern fn kernel_main() {
     irq::init();
     idt::init();
     keyboard::init();
+    paging::init();
     timer::init();
 
     vga::clear_screen();
     vga::puts("Hello world! ");
-
+/*
     let chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ ";
     let mut current: uint = 0;
     loop {
         timer::sleep(1000);
         vga::putch(chars[current] as char);
         current = (current + 1) % chars.len();
+    }*/
+
+    vga::putch('\n');
+
+    unsafe {
+        let ptr = 0xa0000000 as *u32;
+        let value = *ptr;
+        console::write_num(value);
     }
 
     loop {}
