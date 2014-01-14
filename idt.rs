@@ -70,10 +70,6 @@ static mut table: IdtPtr = IdtPtr {
     base: 0 as *IdtTable
 };
 
-struct Handler {
-    f: extern "Rust" fn(regs: &Registers)
-}
-
 static EXCEPTIONS: &'static [&'static str] = &[
     "Divide-by-zero Error",
     "Debug",
@@ -111,12 +107,9 @@ fn exception_isr_handler(regs: &Registers) {
     loop {}
 }
 
-static mut interrupt_handlers: [Handler, ..IDT_SIZE] = [
-    Handler { f: dummy_isr_handler }, ..IDT_SIZE
-];
-/*static mut interrupt_handlers: ['static |&Registers|, ..IDT_SIZE] = [
+static mut interrupt_handlers: [fn(regs: &Registers), ..IDT_SIZE] = [
     dummy_isr_handler, ..IDT_SIZE
-];*/
+];
 
 // Defined in handlers.s
 extern { static isr_handler_array: [u32, ..IDT_SIZE]; }
@@ -138,9 +131,9 @@ pub fn init() {
     }
 }
 
-pub fn register_isr_handler(which: uint, f: extern "Rust" fn(regs: &Registers)) {
+pub fn register_isr_handler(which: uint, f: fn(regs: &Registers)) {
     unsafe {
-        interrupt_handlers[which] = Handler { f: f };
+        interrupt_handlers[which] = f;
     }
 }
 
@@ -157,8 +150,7 @@ pub extern fn isr_handler(regs: &Registers) {
         io::write_port(0xA0, 0x20); // Slave
     }
 
-    let f = unsafe { interrupt_handlers[which].f };
-    f(regs);
+    unsafe { interrupt_handlers[which](regs); }
 }
 
 unsafe fn idt_enable() {
