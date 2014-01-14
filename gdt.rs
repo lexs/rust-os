@@ -72,9 +72,8 @@ pub fn init() {
 unsafe fn gdt_flush(ptr: *GdtPtr, codeseg: u16, dataseg: u16) {
     asm!("lgdt ($0)" :: "r"(ptr));
     asm!("jmp $0, $$.g; .g:" :: "Ir"(codeseg) :: "volatile");
-    asm!("mov $0, %ax;  \
-         mov %ax, %ds; \
-         mov %ax, %es; \
-         mov %ax, %fs; \
-         mov %ax, %ss" :: "Ir"(dataseg) : "ax" : "volatile");
+    asm!("mov %ax, %ds; \
+          mov %ax, %es; \
+          mov %ax, %fs; \
+          mov %ax, %ss" :: "{ax}"(dataseg) : "ax" : "volatile");
 }
