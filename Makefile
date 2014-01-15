@@ -15,6 +15,8 @@ QEMU=qemu-system-i386
 SOURCES := $(foreach suffix, asm c, $(shell find . -name '*.$(suffix)'))
 OBJECTS := $(patsubst %.asm, %.o, $(patsubst %.c, %.o, $(SOURCES)))
 
+RUST_SOURCES := $(shell find rost/ -name '*.rs')
+
 .SUFFIXES: .o .c .rs .asm .bc
 
 os.bin: linker.ld rost.o core.o $(OBJECTS)
@@ -26,7 +28,7 @@ run: os.bin
 $(LCORE):
 	$(RUSTC) $(RUSTCFLAGS) rust-core/core/lib.rs --out-dir .
 
-rost.o: $(LCORE) rost/.*
+rost.o: $(LCORE) $(RUST_SOURCES)
 	$(RUSTC) $(RUSTCFLAGS) --lib -o $@ -c rost/mod.rs -L .
 
 main.o: $(LCORE) arch/.* drivers/.* kernel/.* memory/.*

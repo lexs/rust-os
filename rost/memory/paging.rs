@@ -25,8 +25,7 @@ static FLAG_USER: u32 = 1 << 2;
 
 pub fn init() {
     unsafe {
-        kernel_directory = alloc_s::<PageDirectory>();
-        *kernel_directory = PageDirectory::new();
+        kernel_directory = box_alloc(PageDirectory::new());
     }
 
     // Identity map all currently used memory
@@ -98,8 +97,7 @@ impl PageDirectory {
         let table_index = address / (4096 * 1024);
 
         if to_addr(self.tables[table_index]) == 0 {
-            let table = alloc_s::<PageTable>();
-            *table = PageTable::empty();
+            let table = box_alloc(PageTable::empty());
 
             self.tables[table_index] = table as u32 | FLAG_PRESENT | FLAG_WRITE | FLAG_USER;
             table
@@ -158,9 +156,12 @@ unsafe fn write_cr0(value: u32) {
     asm!("mov $0, %cr0" :: "r"(value) :: "volatile");
 }
 
-unsafe fn alloc_s<T>() -> *mut T {
+#[inline]
+unsafe fn box_alloc<T>(value: T) -> *mut T {
     let size = size_of::<T>();
-    alloc::<T>(size as u32)
+    let ptr = alloc::<T>(size as u32);
+    *ptr = value;
+    ptr
 }
 
 static mut placement_address: u32 = 0;
