@@ -3,7 +3,7 @@ use core::container::Container;
 use core2::ptr::mut_offset;
 use core2::intrinsics::volatile_store;
 
-use io;
+use arch::io;
 use util::range;
 
 #[repr(u8)]

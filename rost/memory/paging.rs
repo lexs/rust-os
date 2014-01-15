@@ -1,7 +1,7 @@
 use core::mem::size_of;
 
-use console;
-use idt;
+use kernel::console;
+use arch::idt;
 
 #[packed]
 struct Page(u32);

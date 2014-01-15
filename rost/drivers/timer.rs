@@ -1,7 +1,7 @@
-use io;
-use idt;
-use irq;
-use vga;
+use arch::io;
+use arch::idt;
+use arch::irq;
+use drivers::vga;
 
 use core2::intrinsics::{volatile_load, volatile_store};
 

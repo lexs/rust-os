@@ -1,8 +1,8 @@
 use core::container::Container;
 use core::mem::size_of;
 
-use vga;
-use io;
+use arch::io;
+use drivers::vga;
 use util;
 use util::range;
 

@@ -12,10 +12,13 @@ LCORE=libcore-2e829c2f-0.0.rlib
 
 QEMU=qemu-system-i386
 
+SOURCES := $(foreach suffix, asm c, $(shell find . -name '*.$(suffix)'))
+OBJECTS := $(patsubst %.asm, %.o, $(patsubst %.c, %.o, $(SOURCES)))
+
 .SUFFIXES: .o .c .rs .asm .bc
 
-os.bin: linker.ld boot.o runtime.o main.o core.o handlers.o support.o
-	$(LD) -T linker.ld -o os.bin boot.o runtime.o main.o core.o handlers.o support.o
+os.bin: linker.ld rost.o core.o $(OBJECTS)
+	$(LD) -T linker.ld -o $@ rost.o core.o $(OBJECTS)
 
 run: os.bin
 	$(QEMU) -kernel os.bin
@@ -23,7 +26,10 @@ run: os.bin
 $(LCORE):
 	$(RUSTC) $(RUSTCFLAGS) rust-core/core/lib.rs --out-dir .
 
-main.o: $(LCORE) kernel.rs util.rs io.rs vga.rs gdt.rs irq.rs idt.rs timer.rs keyboard.rs paging.rs console.rs
+rost.o: $(LCORE) rost/.*
+	$(RUSTC) $(RUSTCFLAGS) --lib -o $@ -c rost/mod.rs -L .
+
+main.o: $(LCORE) arch/.* drivers/.* kernel/.* memory/.*
 
 core.o: $(LCORE)
 	ar -x $(LCORE) core.o
@@ -38,4 +44,4 @@ core.o: $(LCORE)
 	$(CLANG) $(CLANGFLAGS) -o $@ -c $<
 
 clean:
-	rm *.{o,bin,bc,rlib}
+	rm -f *.{o,bin,bc,rlib} $(OBJECTS)

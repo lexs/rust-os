@@ -1,4 +1,4 @@
-use vga;
+use drivers::vga;
 use util;
 
 pub fn write_str(s: &str) {

@@ -1,6 +1,8 @@
 use core::container::Container;
 
-use vga;
+use drivers::vga;
+
+pub mod console;
 
 static PANIC_MSG: &'static str = "PANIC: ";
 

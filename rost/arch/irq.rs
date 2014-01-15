@@ -1,5 +1,5 @@
-use idt;
-use io;
+use arch::idt;
+use arch::io;
 
 static IRQ_BASE: uint = 32;
 

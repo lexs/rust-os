@@ -1,9 +1,9 @@
 use core::container::Container;
 
-use irq;
-use idt;
-use io;
-use vga;
+use arch::irq;
+use arch::idt;
+use arch::io;
+use drivers::vga;
 
 static KEYMAP: &'static str = "\
 \x00\x1B1234567890-=\x08\tqwertyuiop[]\n?asdfghjkl;'`?\\zxcvbnm,./?*? ?????????????789-456+1230.?????";
