@@ -4,6 +4,18 @@ use core::mem::size_of;
 static GDT_SIZE: uint = 5;
 type GdtTable = [GdtEntry, ..GDT_SIZE];
 
+static GRANULARITY: u8 = 0xc0; // 4kb blocks and 32-bit protected
+
+static RW: u8 = 1 << 1;
+static EXECUTE: u8 = 1 << 3;
+static ALWAYS1: u8 = 1 << 4;
+static PRESENT: u8 = 1 << 7;
+
+static USER: u8 = 3 << 5; // Ring 3
+
+static CODE: u8 = PRESENT | ALWAYS1 | EXECUTE | RW;
+static DATA: u8 = PRESENT | ALWAYS1 | RW;
+
 #[packed]
 struct GdtEntry {
     limit_low: u16,
@@ -57,11 +69,11 @@ static mut table: GdtPtr = GdtPtr { limit: 0, base: 0 as *GdtTable };
 
 pub fn init() {
     unsafe {
-        entries[0] = GdtEntry::new(0, 0, 0, 0);
-        entries[1] = GdtEntry::new(0, 0xFFFFFFFF, 0x9A, 0xCF);
-        entries[2] = GdtEntry::new(0, 0xFFFFFFFF, 0x92, 0xCF);
-        entries[3] = GdtEntry::new(0, 0xFFFFFFFF, 0xFA, 0xCF);
-        entries[4] = GdtEntry::new(0, 0xFFFFFFFF, 0xF2, 0xCF);
+        entries[0] = GdtEntry::new(0, 0, 0, 0); // Null
+        entries[1] = GdtEntry::new(0, 0xFFFFFFFF, CODE, GRANULARITY);
+        entries[2] = GdtEntry::new(0, 0xFFFFFFFF, DATA, GRANULARITY);
+        entries[3] = GdtEntry::new(0, 0xFFFFFFFF, USER | CODE, GRANULARITY);
+        entries[4] = GdtEntry::new(0, 0xFFFFFFFF, USER | DATA, GRANULARITY);
 
         table = GdtPtr::new(&entries);
 
