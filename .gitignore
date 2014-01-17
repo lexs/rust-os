@@ -2,4 +2,6 @@
 *.o
 *.rlib
 
+*.elf
+*.embed
 *.bin

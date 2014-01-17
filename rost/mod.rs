@@ -11,6 +11,7 @@ mod arch;
 mod kernel;
 mod drivers;
 mod memory;
+mod exec;
 
 mod core2;
 
@@ -23,9 +24,24 @@ pub extern fn kernel_main() {
     arch::idt::init();
     drivers::init();
 
-    drivers::vga::clear_screen();
-    drivers::vga::puts("Hello world! ");
+    memory::paging::init();
 
+    exec::syscalls::init();
+
+    drivers::vga::clear_screen();
+    drivers::vga::puts("Hello world!\n");
+
+    extern { static _binary_do_nothing_elf_start: u8; }
+    let do_nothing = &_binary_do_nothing_elf_start as *u8;
+
+    if unsafe { exec::elf::probe(do_nothing) } {
+        drivers::vga::puts("Found program!\n");
+
+        unsafe { exec::elf::exec(do_nothing); }
+    }
+
+
+/*
     let chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ ";
     let mut current: uint = 0;
     loop {
@@ -39,7 +55,7 @@ pub extern fn kernel_main() {
         let value = *ptr;
         kernel::console::write_num(value);
     }
-
+*/
     loop {}
 }
 

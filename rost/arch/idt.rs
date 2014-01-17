@@ -100,6 +100,7 @@ fn dummy_isr_handler(regs: &Registers) {
     vga::puts(", error: ");
     util::convert(regs.err_code, |c| vga::putch(c));
     vga::puts("\n");
+    loop {}
 }
 
 fn exception_isr_handler(regs: &Registers) {
