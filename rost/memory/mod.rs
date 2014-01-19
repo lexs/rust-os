@@ -1,5 +1,12 @@
+pub use self::virtual::{
+    map,
+    FLAG_PRESENT,
+    FLAG_WRITE,
+    FLAG_USER
+};
+
 mod physical;
-pub mod virtual;
+mod virtual;
 
 pub fn init() {
     physical::init();
