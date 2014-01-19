@@ -2,71 +2,78 @@ use core::mem::size_of;
 
 use kernel::console;
 use arch::idt;
+use memory::allocator;
 
 static PAGE_SIZE: u32 = 0x1000;
+
+static NUM_ENTRIES: u32 = 1024;
 
 #[packed]
 struct Page(u32);
 
 #[packed]
 struct PageTable {
-    pages: [Page, ..1024]
+    entries: [Page, ..NUM_ENTRIES]
 }
 
-#[packed]
-struct PageDirectory {
-    tables: [u32, ..1024]
-}
+static mut kernel_directory: *mut PageTable = 0xFFFFF000 as *mut PageTable;
+static PAGES : u32 = 0xFFC00000;
 
-static mut kernel_directory: *mut PageDirectory = 0 as *mut PageDirectory;
-
-static NO_FLAGS: u32 = 0;
-static FLAG_PRESENT: u32 = 1 << 0;
-static FLAG_WRITE: u32 = 1 << 1;
-static FLAG_USER: u32 = 1 << 2;
-
-static mut next_frame: u32 = 0;
-fn get_next_frame() -> u32 {
-    unsafe {
-        let frame = next_frame;
-        next_frame += 1;
-        frame
-    }
-}
+pub static FLAG_PRESENT: u32 = 1 << 0;
+pub static FLAG_WRITE: u32 = 1 << 1;
+pub static FLAG_USER: u32 = 1 << 2;
 
 pub fn init() {
     unsafe {
-        kernel_directory = box_alloc(PageDirectory::new());
+        let directory = allocator::allocate_frame() as *mut PageTable;
+        *directory = PageTable::empty();
+
+        let table = allocator::allocate_frame() as *mut PageTable;
+        *table = PageTable::empty();
+
+        // Identity map table the whole table, 4MB
+        let mut i = 0;
+        while i < PAGE_SIZE * NUM_ENTRIES {
+            let page = (*table).get_page(i);
+            page.set(i, FLAG_PRESENT | FLAG_WRITE);
+            i += PAGE_SIZE;
+        }
+
+        (*directory).set_entry(0, table, FLAG_PRESENT | FLAG_WRITE);
+
+        // Map the directory itself as the last entry
+        (*directory).set_entry(dir_index(kernel_directory as u32), directory, FLAG_PRESENT | FLAG_WRITE);
+
+        idt::register_isr_handler(14, page_fault);
+
+        switch_page_directory(unsafe { directory });
     }
-
-    // Identity map all currently used memory
-    let mut i = 0;
-    // We don't currently have a real malloc so just use some extra space
-    while i < unsafe { placement_address + PAGE_SIZE * 10 } {
-        let page = unsafe { (*kernel_directory).get_page(i) };
-        page.set(get_next_frame() * PAGE_SIZE, FLAG_PRESENT | FLAG_WRITE);
-        i += PAGE_SIZE;
-    }
-
-    idt::register_isr_handler(14, page_fault);
-
-    switch_page_directory(unsafe { kernel_directory });
 }
 
-pub fn map(addr: u32, size: u32) {
-    let mut current_addr = addr;
-    while current_addr < addr + size {
-        let page = unsafe { (*kernel_directory).get_page(current_addr) };
-        page.set(get_next_frame() * PAGE_SIZE, FLAG_PRESENT | FLAG_WRITE);
-        flush_tlb(current_addr);
+pub fn map(addr: u32, size: u32, flags: u32) {
+    unsafe {
+        // FIXME: We assume the table doesn't exist and it can hold the whole size
+        let directory_index = dir_index(addr);
 
-        current_addr += PAGE_SIZE;
+        let table_physical = allocator::allocate_frame() as *mut PageTable;
+        (*kernel_directory).set_entry(directory_index, table_physical, FLAG_PRESENT | flags);
+
+        let table = page_table(directory_index);
+        // Flush table so we can write to its virtual address
+        flush_tlb(table);
+
+        *table = PageTable::empty();
+
+        let mut current_addr = addr;
+        while current_addr < addr + size {
+            let page = (*table).get_page(current_addr);
+
+            page.set(allocator::allocate_frame(), FLAG_PRESENT | FLAG_WRITE);
+            flush_tlb(current_addr);
+
+            current_addr += PAGE_SIZE;
+        }
     }
-
-    console::write_str("Mapping: ");
-    console::write_hex(addr);
-    console::write_newline();
-    //reload_page_directory();
 }
 
 fn page_fault(regs: &idt::Registers) {
@@ -110,66 +117,40 @@ impl Page {
 
 impl PageTable {
     fn empty() -> PageTable {
-        PageTable { pages: [Page::empty(), ..1024] }
+        PageTable { entries: [Page::empty(), ..NUM_ENTRIES] }
+    }
+
+    unsafe fn set_entry<T>(&mut self, index: u32, entry: *mut T, flags: u32) {
+        self.entries[index] = Page(entry as u32 | flags);
+    }
+
+    unsafe fn get_page<'a>(&'a mut self, addr: u32) -> &'a mut Page {
+        &'a mut self.entries[table_index(addr)]
     }
 }
 
-impl PageDirectory {
-    fn new() -> PageDirectory {
-        PageDirectory {
-            tables: [0, ..1024]
-        }
-    }
-
-    unsafe fn get_table(&mut self, address: u32) -> *mut PageTable {
-        let table_index = address / (4096 * 1024);
-
-        /*console::write_str("Table index: ");
-        console::write_num(table_index);
-        console::write_newline();*/
-
-        if to_addr(self.tables[table_index]) == 0 {
-            //console::write_str("does not exists\n");
-            let table = box_alloc(PageTable::empty());
-
-            
-
-            self.tables[table_index] = table as u32 | FLAG_PRESENT | FLAG_WRITE | FLAG_USER;
-            table
-        } else {
-            //console::write_str("exists\n");
-            to_addr(self.tables[table_index]) as *mut PageTable
-        }
-    }
-
-    unsafe fn get_page(&mut self, address: u32) -> &mut Page {
-        let table = self.get_table(address);
-
-        let page_index = address / 4096;
-
-        /*console::write_str("Page index: ");
-        console::write_num(page_index % 1024);
-        console::write_newline();*/
-
-        &mut (*table).pages[page_index % 1024]
-    }
-
-    unsafe fn get_physical(&mut self, address: u32) -> u32 {
-        let page = self.get_page(address);
-        page.addr() + (address % 1024)
-    }
+fn page_table(index: u32) -> *mut PageTable {
+    let size = size_of::<PageTable>() as u32;
+    (PAGES + index * size) as *mut PageTable
 }
 
-fn flush_tlb(addr: u32) {
+fn dir_index(addr: u32) -> u32 {
+    addr / (PAGE_SIZE * NUM_ENTRIES)
+}
+
+fn table_index(addr: u32) -> u32 {
+    (addr / PAGE_SIZE) % NUM_ENTRIES
+}
+
+fn flush_tlb<T>(addr: T) {
     unsafe {
-        asm!("invlpg ($0)" :: "r"(addr) : "volatile memory");
+        asm!("invlpg ($0)" :: "r"(addr) : "volatile", "memory");
     }
 }
 
-fn switch_page_directory(directory: *mut PageDirectory) {
+fn switch_page_directory(directory: *mut PageTable) {
     unsafe {
-        let address = (*directory).get_physical(directory as u32);
-        write_cr3(address);
+        write_cr3(directory as u32);
         // Set the paging bit in CR0 to 1
         write_cr0(read_cr0() | 0x80000000);
     }
@@ -201,29 +182,4 @@ unsafe fn read_cr0() -> u32 {
 
 unsafe fn write_cr0(value: u32) {
     asm!("mov $0, %cr0" :: "r"(value) :: "volatile");
-}
-
-#[inline]
-unsafe fn box_alloc<T>(value: T) -> *mut T {
-    let size = size_of::<T>();
-    let ptr = alloc::<T>(size as u32);
-    *ptr = value;
-    ptr
-}
-
-static mut placement_address: u32 = 0;
-unsafe fn alloc<T>(size: u32) -> *mut T {
-    if placement_address == 0 {
-        extern { static kernel_end: u32; }
-        placement_address = (&kernel_end as *u32) as u32;
-    }
-
-    if placement_address & !0xfff != 0 {
-        placement_address &= !0xfff;
-        placement_address += 0x1000;
-    }
-
-    let address = placement_address;
-    placement_address += size;
-    address as *mut T
 }

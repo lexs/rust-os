@@ -24,6 +24,7 @@ pub extern fn kernel_main() {
     arch::idt::init();
     drivers::init();
 
+    memory::allocator::init();
     memory::paging::init();
 
     exec::syscalls::init();
