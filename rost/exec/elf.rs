@@ -4,7 +4,7 @@ use core::option::{Option, Some, None};
 use core2::ptr::{offset, mut_offset};
 
 use kernel::console;
-use memory::paging;
+use memory::virtual;
 
 enum Ident {
     EI_MAG0 = 0,
@@ -158,7 +158,7 @@ fn write(msg: &str, value: u32) {
 
 unsafe fn load_program_header(buffer: *u8, header: &ProgramHeader) {
     console::write_str("load_program_header()\n");
-    paging::map(header.p_vaddr, header.p_memsz, paging::FLAG_WRITE);
+    virtual::map(header.p_vaddr, header.p_memsz, virtual::FLAG_WRITE);
     let vaddr = header.p_vaddr as *mut u8;
     console::write_str("Loading data at ");
     console::write_hex(vaddr as u32);

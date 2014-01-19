@@ -2,10 +2,9 @@ use core::mem::size_of;
 
 use kernel::console;
 use arch::idt;
-use memory::allocator;
+use memory::physical;
 
 static PAGE_SIZE: u32 = 0x1000;
-
 static NUM_ENTRIES: u32 = 1024;
 
 #[packed]
@@ -25,10 +24,10 @@ pub static FLAG_USER: u32 = 1 << 2;
 
 pub fn init() {
     unsafe {
-        let directory = allocator::allocate_frame() as *mut PageTable;
+        let directory = physical::allocate_frame() as *mut PageTable;
         *directory = PageTable::empty();
 
-        let table = allocator::allocate_frame() as *mut PageTable;
+        let table = physical::allocate_frame() as *mut PageTable;
         *table = PageTable::empty();
 
         // Identity map table the whole table, 4MB
@@ -55,7 +54,7 @@ pub fn map(addr: u32, size: u32, flags: u32) {
         // FIXME: We assume the table doesn't exist and it can hold the whole size
         let directory_index = dir_index(addr);
 
-        let table_physical = allocator::allocate_frame() as *mut PageTable;
+        let table_physical = physical::allocate_frame() as *mut PageTable;
         (*kernel_directory).set_entry(directory_index, table_physical, FLAG_PRESENT | flags);
 
         let table = page_table(directory_index);
@@ -68,7 +67,7 @@ pub fn map(addr: u32, size: u32, flags: u32) {
         while current_addr < addr + size {
             let page = (*table).get_page(current_addr);
 
-            page.set(allocator::allocate_frame(), FLAG_PRESENT | FLAG_WRITE);
+            page.set(physical::allocate_frame(), FLAG_PRESENT | FLAG_WRITE);
             flush_tlb(current_addr);
 
             current_addr += PAGE_SIZE;
