@@ -1,3 +1,4 @@
+use core;
 use core::ptr::{copy_nonoverlapping_memory, set_memory};
 use core::option::{Option, Some, None};
 
@@ -54,10 +55,11 @@ enum HeaderType {
     PT_TLS = 7,
 }
 
-// Header flags
-static PT_X: u32 = 0x1;
-static PT_R: u32 = 0x2;
-static PT_W: u32 = 0x4;
+define_flags!(HeaderFlags: u32 {
+    PT_X = 0x1,
+    PT_R = 0x2,
+    PT_W = 0x4
+})
 
 #[packed]
 struct ProgramHeader {
@@ -67,65 +69,63 @@ struct ProgramHeader {
     p_paddr: u32,
     p_filesz: u32,
     p_memsz: u32,
-    p_flags: u32
+    p_flags: HeaderFlags
 }
 
 pub fn probe(buffer: *u8) -> bool {
-    match unsafe { read_header(buffer) } {
-        Some(_) => true,
-        None => false
-    }
+    let header = buffer as *ELFHeader;
+    unsafe { check_magic(&(*header).e_ident) }
 }
 
 pub fn exec(buffer: *u8) {
-    match unsafe { read_header(buffer) } {
-        Some(header) => unsafe { start(buffer, header) },
-        None => {}
+    unsafe {
+        let header = buffer as *ELFHeader;
+
+        match setup(buffer, header) {
+            Some(entry) => asm!("jmp *$0" :: "r"(entry) :: "volatile"),
+            None => {}
+        }
     }
 }
 
-fn check_magic(ident: &ELFIdent) -> bool {
-    let magic = "\u007fELF";
-    ident.ei_mag[0] == magic[0]
-        && ident.ei_mag[1] == magic[1]
-        && ident.ei_mag[2] == magic[2]
-        && ident.ei_mag[3] == magic[3]
+unsafe fn check_magic(ident: &ELFIdent) -> bool {
+    static MAGIC: &'static str = "\u007fELF";
+    let ei_mag = &ident.ei_mag;
+
+    ei_mag[0] == MAGIC[0]
+        && ei_mag[1] == MAGIC[1]
+        && ei_mag[2] == MAGIC[2]
+        && ei_mag[3] == MAGIC[3]
 }
 
-unsafe fn read_header(buffer: *u8) -> Option<&ELFHeader> {
-    let header = buffer as *ELFHeader;
-    if check_magic(&(*header).e_ident) {
-        Some(&(*header))
-    } else {
-        None
-    }
-}
-
-unsafe fn start(buffer: *u8, header: &ELFHeader) {
-    if header.e_type != ET_EXEC as u16 {
+unsafe fn setup(buffer: *u8, header: *ELFHeader) -> Option<u32> {
+    if (*header).e_type != ET_EXEC as u16 {
         // File is not excutable
         console::write_str("Not executable\n");
-        return;
+        return None;
     }
 
-    let mut i: uint = 0;
-    while i < header.e_phnum as uint {
-        let program_header_offset = header.e_phoff as uint + i * header.e_phentsize as uint;
-        let program_header = offset(buffer, program_header_offset as int) as *ProgramHeader;
+    let header_count = (*header).e_phnum as int;
+    let header_size = (*header).e_phentsize as int;
+    let header_base = offset(buffer, (*header).e_phoff as int) as *ProgramHeader;
+
+    let mut i: int = 0;
+    while i < header_count {
+        let program_header = offset(header_base, i * header_size);
 
         match (*program_header).p_type {
             PT_NULL => {}, // Ignore
             PT_LOAD => load_segment(buffer, program_header),
             _ => {
                 console::write_str("Unsupported ELF segment\n");
-                return;
+                return None;
             }
         }
 
         i += 1;
     }
 
-    asm!("jmp *$0" :: "r"(header.e_entry) :: "volatile");
+    Some((*header).e_entry)
 }
 
 unsafe fn load_segment(buffer: *u8, header: *ProgramHeader) {
@@ -141,7 +141,7 @@ unsafe fn load_segment(buffer: *u8, header: *ProgramHeader) {
 }
 
 unsafe fn translate_flags(header: *ProgramHeader) -> u32 {
-    if (*header).p_flags & PT_W != 0 {
+    if (*header).p_flags & PT_W {
         memory::FLAG_WRITE
     } else {
         0

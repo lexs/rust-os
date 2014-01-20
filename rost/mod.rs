@@ -7,6 +7,9 @@ extern mod core;
 
 use core::container::Container;
 
+#[macro_escape]
+mod macros;
+
 mod arch;
 mod kernel;
 mod drivers;
