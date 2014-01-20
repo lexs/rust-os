@@ -1,22 +1,10 @@
-use core::mem::size_of;
+use core::ptr::{copy_nonoverlapping_memory, set_memory};
 use core::option::{Option, Some, None};
 
 use core2::ptr::{offset, mut_offset};
 
 use kernel::console;
 use memory;
-
-enum Ident {
-    EI_MAG0 = 0,
-    EI_MAG1 = 1,
-    EI_MAG2 = 2,
-    EI_MAG3 = 3,
-    EI_CLASS = 4,
-    EI_DATA = 5,
-    EI_VERSION = 6,
-    EI_OSABI = 7,
-    EI_PAD = 8
-}
 
 #[packed]
 struct ELFIdent {
@@ -64,11 +52,12 @@ enum HeaderType {
     PT_SHLIB = 5,
     PT_PHDR = 6,
     PT_TLS = 7,
-    PT_LOOS = 0x60000000,
-    PT_HIOS = 0x6fffffff,
-    PT_LOPROC = 0x70000000,
-    PT_HIPROC = 0x7fffffff
 }
+
+// Header flags
+static PT_X: u32 = 0x1;
+static PT_R: u32 = 0x2;
+static PT_W: u32 = 0x4;
 
 #[packed]
 struct ProgramHeader {
@@ -80,8 +69,6 @@ struct ProgramHeader {
     p_memsz: u32,
     p_flags: u32
 }
-
-
 
 pub fn probe(buffer: *u8) -> bool {
     match unsafe { read_header(buffer) } {
@@ -121,52 +108,42 @@ unsafe fn start(buffer: *u8, header: &ELFHeader) {
         return;
     }
 
-    write("Headers count: ", header.e_phnum as u32);
-
     let mut i: uint = 0;
     while i < header.e_phnum as uint {
-        let program_header_offset: uint = header.e_phoff as uint + i * header.e_phentsize as uint;
+        let program_header_offset = header.e_phoff as uint + i * header.e_phentsize as uint;
         let program_header = offset(buffer, program_header_offset as int) as *ProgramHeader;
-
-        write("Offset: ", program_header_offset as u32);
-        write("Header at ", program_header as u32);
 
         match (*program_header).p_type {
             PT_NULL => {}, // Ignore
-            PT_LOAD => load_program_header(buffer, &(*program_header)),
-            _ => {}
+            PT_LOAD => load_segment(buffer, program_header),
+            _ => {
+                console::write_str("Unsupported ELF segment\n");
+                return;
+            }
         }
 
         i += 1;
     }
 
-    write("Entry is at ", header.e_entry);
-
     asm!("jmp *$0" :: "r"(header.e_entry) :: "volatile");
 }
 
-extern {
-    fn memcpy(dest: *mut u8, src: *u8, n: int);
-    fn memset(s: *mut u8, c: int, n: int);
+unsafe fn load_segment(buffer: *u8, header: *ProgramHeader) {
+    let memsize = (*header).p_memsz; // Size in memory
+    let filesize = (*header).p_filesz; // Size in file
+    let mempos = (*header).p_vaddr as *mut u8; // Position in memory
+    let filepos = (*header).p_offset; // Position in file
+
+    memory::map(mempos as u32, memsize, memory::FLAG_PRESENT | translate_flags(header));
+
+    copy_nonoverlapping_memory(mempos, offset(buffer, filepos as int), filesize as uint);
+    set_memory(mut_offset(mempos, (filepos + filesize) as int), 0, (memsize - filesize) as uint);
 }
 
-fn write(msg: &str, value: u32) {
-    console::write_str(msg);
-    console::write_hex(value);
-    console::write_newline();
-}
-
-unsafe fn load_program_header(buffer: *u8, header: &ProgramHeader) {
-    console::write_str("load_program_header()\n");
-    memory::map(header.p_vaddr, header.p_memsz, memory::FLAG_PRESENT | memory::FLAG_WRITE);
-    let vaddr = header.p_vaddr as *mut u8;
-    console::write_str("Loading data at ");
-    console::write_hex(vaddr as u32);
-    console::write_newline();
-    memcpy(vaddr, offset(buffer, header.p_offset as int), header.p_filesz as int);
-
-    if header.p_memsz > header.p_filesz {
-        let difference = header.p_memsz - header.p_filesz;
-        memset(mut_offset(vaddr, (header.p_offset + header.p_filesz) as int), 0, difference as int);
+unsafe fn translate_flags(header: *ProgramHeader) -> u32 {
+    if (*header).p_flags & PT_W != 0 {
+        memory::FLAG_WRITE
+    } else {
+        0
     }
 }
