@@ -34,8 +34,8 @@ pub extern fn kernel_main() {
     drivers::vga::clear_screen();
     drivers::vga::puts("Hello world!\n");
 
-    extern { static _binary_do_nothing_elf_start: u8; }
-    let do_nothing = &_binary_do_nothing_elf_start as *u8;
+    extern { static _binary_hello_world_elf_start: u8; }
+    let do_nothing = &_binary_hello_world_elf_start as *u8;
 
     if unsafe { exec::elf::probe(do_nothing) } {
         drivers::vga::puts("Found program!\n");

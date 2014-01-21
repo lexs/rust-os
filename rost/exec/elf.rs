@@ -53,6 +53,9 @@ enum HeaderType {
     PT_SHLIB = 5,
     PT_PHDR = 6,
     PT_TLS = 7,
+    PT_LOOS = 0x60000000, // OS-specific
+    PT_HIOS = 0x6fffffff, // OS-specific
+    PT_GNU_STACK = 0x60000000 + 0x474e551
 }
 
 define_flags!(HeaderFlags: u32 {
@@ -88,9 +91,9 @@ pub fn exec(buffer: *u8) {
     }
 }
 
-unsafe fn check_magic(ident: &ELFIdent) -> bool {
+unsafe fn check_magic(ident: *ELFIdent) -> bool {
     static MAGIC: &'static str = "\u007fELF";
-    let ei_mag = &ident.ei_mag;
+    let ei_mag = &(*ident).ei_mag;
 
     ei_mag[0] == MAGIC[0]
         && ei_mag[1] == MAGIC[1]
@@ -107,17 +110,28 @@ unsafe fn setup(buffer: *u8, header: *ELFHeader) -> Option<u32> {
 
     let header_count = (*header).e_phnum as int;
     let header_size = (*header).e_phentsize as int;
-    let header_base = offset(buffer, (*header).e_phoff as int) as *ProgramHeader;
+    let header_base = offset(buffer, (*header).e_phoff as int);
 
     let mut i: int = 0;
     while i < header_count {
-        let program_header = offset(header_base, i * header_size);
+        let program_header = offset(header_base, i * header_size) as *ProgramHeader;
+
+        // Does this program need an executable stack
+        let mut exec_stack = true;
 
         match (*program_header).p_type {
             PT_NULL => {}, // Ignore
             PT_LOAD => load_segment(buffer, program_header),
-            _ => {
-                console::write_str("Unsupported ELF segment\n");
+            PT_GNU_STACK => {
+                // We don't need an executable stack if the exec flag is not set
+                if (*program_header).p_flags & !PT_X {
+                    exec_stack = false;
+                }
+            },
+            other => {
+                console::write_str("Unsupported ELF segment: ");
+                console::write_num(other as u32);
+                console::write_newline();
                 return None;
             }
         }
@@ -129,15 +143,15 @@ unsafe fn setup(buffer: *u8, header: *ELFHeader) -> Option<u32> {
 }
 
 unsafe fn load_segment(buffer: *u8, header: *ProgramHeader) {
-    let memsize = (*header).p_memsz; // Size in memory
-    let filesize = (*header).p_filesz; // Size in file
-    let mempos = (*header).p_vaddr as *mut u8; // Position in memory
-    let filepos = (*header).p_offset; // Position in file
+    let mem_size = (*header).p_memsz; // Size in memory
+    let file_size = (*header).p_filesz; // Size in file
+    let mem_pos = (*header).p_vaddr as *mut u8; // Position in memory
+    let file_pos = (*header).p_offset; // Position in file
 
-    memory::map(mempos as u32, memsize, memory::FLAG_PRESENT | translate_flags(header));
+    memory::map(mem_pos as u32, mem_size, memory::FLAG_PRESENT | translate_flags(header));
 
-    copy_nonoverlapping_memory(mempos, offset(buffer, filepos as int), filesize as uint);
-    set_memory(mut_offset(mempos, (filepos + filesize) as int), 0, (memsize - filesize) as uint);
+    copy_nonoverlapping_memory(mem_pos, offset(buffer, file_pos as int), file_size as uint);
+    set_memory(mut_offset(mem_pos, (file_pos + file_size) as int), 0, (mem_size - file_size) as uint);
 }
 
 unsafe fn translate_flags(header: *ProgramHeader) -> u32 {

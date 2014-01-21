@@ -1,3 +1,5 @@
+use core2::ptr::offset;
+
 use arch::idt;
 use kernel::console;
 
@@ -10,6 +12,7 @@ static mut syscalls: [fn(regs: &idt::Registers), ..NUM_SYSCALLS] = [
 pub fn init() {
     unsafe {
         syscalls[1] = syscall_exit;
+        syscalls[2] = syscall_write;
     }
 
     idt::register_isr_handler(0x80, syscall_handler);
@@ -35,4 +38,20 @@ fn syscall_exit(regs: &idt::Registers) {
     console::write_num(regs.ebx);
     console::write_newline();
     loop {}
+}
+
+fn syscall_write(regs: &idt::Registers) {
+    let fd = regs.ebx;
+    let data = regs.ecx as *u8;
+    let len = regs.edx;
+
+    kassert!(fd == 1);
+
+    let mut i = 0;
+    while i < len {
+        let c = unsafe { *offset(data, i as int) as char };
+        console::write_char(c);
+
+        i += 1;
+    }
 }

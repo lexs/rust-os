@@ -26,6 +26,13 @@ macro_rules! define_flags (
             }
         }
 
+        impl core::ops::Not<$name> for $name {
+            #[inline(always)]
+            fn not(&self) -> $name {
+                $name { flags: !self.flags }
+            }
+        }
+
         $(
             pub static $flag: $name = $name { flags: $value };
         )+

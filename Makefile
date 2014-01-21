@@ -6,7 +6,7 @@ NASM=nasm
 RUSTC=rustc
 RUSTCFLAGS := -O --cfg debug --target $(TARGET) -Z no-landing-pads -Z debug-info
 CLANG=clang
-CLANGFLAGS = -target $(TARGET) -O2
+CLANGFLAGS = -target $(TARGET) -O2 -ffreestanding
 
 LCORE=libcore-2e829c2f-0.0.rlib
 
@@ -20,8 +20,8 @@ RUST_SOURCES := $(shell find rost/ -name '*.rs')
 
 .SUFFIXES: .o .c .rs .asm .bc
 
-os.bin: linker.ld rost.o core.o $(OBJECTS) do_nothing.embed
-	$(LD) -T linker.ld -o $@ rost.o core.o $(OBJECTS) do_nothing.embed
+os.bin: linker.ld rost.o core.o $(OBJECTS) do_nothing.embed hello_world.embed
+	$(LD) -T linker.ld -o $@ rost.o core.o $(OBJECTS) do_nothing.embed hello_world.embed
 
 run: os.bin
 	$(QEMU) -kernel os.bin
@@ -37,12 +37,11 @@ main.o: $(LCORE) arch/.* drivers/.* kernel/.* memory/.*
 core.o: $(LCORE)
 	ar -x $(LCORE) core.o
 
-do_nothing.embed: do_nothing.elf
-	$(LD) -b binary -o do_nothing.embed do_nothing.elf
+%.embed: %.elf
+	i386-elf-objcopy -I binary -O elf32-i386 -B i386 $< $@
 
-do_nothing.elf: programs/do_nothing.o
-	$(LD) -o do_nothing.elf programs/do_nothing.o
-	#nasm -f elf32 -Wall -o do_nothing programs/do_nothing.asm
+%.elf: programs/%.o
+	$(LD) -o $@ $<
 
 .asm.o:
 	$(NASM) -f elf32 -Wall -o $@ $<
@@ -54,4 +53,4 @@ do_nothing.elf: programs/do_nothing.o
 	$(CLANG) $(CLANGFLAGS) -o $@ -c $<
 
 clean:
-	rm -f *.{o,bin,bc,rlib,elf,embed} $(OBJECTS)
+	rm -f *.{o,bin,bc,rlib,elf,embed} $(OBJECTS) programs/*.o
