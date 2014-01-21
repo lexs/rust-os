@@ -4,7 +4,7 @@ AS=i386-elf-as
 LD=i386-elf-ld
 NASM=nasm
 RUSTC=rustc
-RUSTCFLAGS := -O --target $(TARGET) -Z no-landing-pads -Z debug-info
+RUSTCFLAGS := -O --cfg debug --target $(TARGET) -Z no-landing-pads -Z debug-info
 CLANG=clang
 CLANGFLAGS = -target $(TARGET) -O2
 

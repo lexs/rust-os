@@ -6,13 +6,17 @@ pub mod console;
 
 static PANIC_MSG: &'static str = "PANIC: ";
 
-pub fn panic(msg: &str) {
+pub fn panic_pretty(msg: &str) {
     vga::clear_screen();
 
     let len = PANIC_MSG.len() + msg.len();
     let x = vga::COLS / 2 - len / 2;
     vga::move_cursor(x, vga::ROWS / 2);
 
+    panic(msg);
+}
+
+pub fn panic(msg: &str) {
     vga::puts(PANIC_MSG);
     vga::puts(msg);
 

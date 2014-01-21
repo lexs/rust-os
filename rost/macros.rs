@@ -31,3 +31,19 @@ macro_rules! define_flags (
         )+
     };
 )
+
+#[cfg(debug)]
+macro_rules! kassert (
+    ($condition:expr) => {
+        if !($condition) {
+            use kernel::panic;
+            let msg = concat!("assert failed: ", stringify!($condition), " at ", file!(), ":", line!());
+            panic(msg);
+        }
+    }
+)
+
+#[cfg(not(debug))]
+macro_rules! kassert (
+    ($condition:expr) => (())
+)
