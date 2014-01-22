@@ -5,9 +5,38 @@ use kernel::console;
 
 static NUM_SYSCALLS: uint = 128;
 
-static mut syscalls: [fn(regs: &idt::Registers), ..NUM_SYSCALLS] = [
+static mut syscalls: [fn(regs: &mut idt::Registers), ..NUM_SYSCALLS] = [
     unimplemented_syscall, ..NUM_SYSCALLS
 ];
+
+macro_rules! syscall1 (
+    (fn $name:ident($a0:ident: $t0:ty) $func:expr) => (
+        fn $name(regs: &mut idt::Registers) {
+            let $a0 = regs.ebx as $t0;
+            $func
+        }
+    )
+)
+
+macro_rules! syscall3 (
+    (fn $name:ident($a0:ident: $t0:ty, $a1:ident: $t1:ty, $a2:ident: $t2:ty) -> $ret:ty $func:expr) => (
+        fn $name(regs: &mut idt::Registers) {
+            let $a0 = regs.ebx as $t0;
+            let $a1 = regs.ecx as $t1;
+            let $a2 = regs.edx as $t2;
+            regs.eax = { $func } as $ret;
+        }
+    );
+    (fn $name:ident($a0:ident: $t0:ty, $a1:ident: $t1:ty, $a2:ident: $t2:ty) $func:expr) => (
+        fn $name(regs: &mut idt::Registers) {
+            let $a0 = regs.ebx as $t0;
+            let $a1 = regs.ecx as $t1;
+            let $a2 = regs.edx as $t2;
+            $func
+        }
+    );
+    
+)
 
 pub fn init() {
     unsafe {
@@ -18,7 +47,7 @@ pub fn init() {
     idt::register_isr_handler(0x80, syscall_handler);
 }
 
-fn syscall_handler(regs: &idt::Registers) {
+fn syscall_handler(regs: &mut idt::Registers) {
     let index = regs.eax;
     if index as uint >= NUM_SYSCALLS {
         unimplemented_syscall(regs);
@@ -27,24 +56,20 @@ fn syscall_handler(regs: &idt::Registers) {
     }
 }
 
-fn unimplemented_syscall(regs: &idt::Registers) {
+fn unimplemented_syscall(regs: &mut idt::Registers) {
     console::write_str("Unimplemented syscall, number=");
     console::write_num(regs.eax);
     console::write_newline();
 }
 
-fn syscall_exit(regs: &idt::Registers) {
+syscall1!(fn syscall_exit(code: u32) {
     console::write_str("Syscall exit, code=");
-    console::write_num(regs.ebx);
+    console::write_num(code);
     console::write_newline();
     loop {}
-}
+})
 
-fn syscall_write(regs: &idt::Registers) {
-    let fd = regs.ebx;
-    let data = regs.ecx as *u8;
-    let len = regs.edx;
-
+syscall3!(fn syscall_write(fd: u32, data: *u8, len: u32) -> u32 {
     kassert!(fd == 1);
 
     let mut i = 0;
@@ -54,4 +79,5 @@ fn syscall_write(regs: &idt::Registers) {
 
         i += 1;
     }
-}
+    i
+})

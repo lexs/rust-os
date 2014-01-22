@@ -42,7 +42,7 @@ pub fn sleep(duration: u32) {
     while (read_ticks() < target) {}
 }
 
-fn timer_handler(regs: &idt::Registers) {
+fn timer_handler(_: &mut idt::Registers) {
     if increment_ticks() % HZ == 0 {
         vga::puts("\nOne second has passed\n");
     }

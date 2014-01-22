@@ -23,7 +23,7 @@ pub fn init() {
     irq::register_handler(1, keyboard_handler);
 }
 
-fn keyboard_handler(regs: &idt::Registers) {
+fn keyboard_handler(_: &mut idt::Registers) {
     let status: u8 = io::read_port(0x64);
     if status & 0x1 == 0 {
         return;

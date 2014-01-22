@@ -21,7 +21,7 @@ pub fn init() {
     io::write_port(0xA1, 0xFF);
 }
 
-pub fn register_handler(irq: uint, f: extern "Rust" fn(regs: &idt::Registers)) {
+pub fn register_handler(irq: uint, f: fn(regs: &mut idt::Registers)) {
     idt::register_isr_handler(irq + IRQ_BASE, f);
     enable(irq);
 }

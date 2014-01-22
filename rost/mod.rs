@@ -64,7 +64,7 @@ pub extern fn kernel_main() {
 
 
 #[no_mangle]
-pub extern fn isr_handler(regs: &arch::idt::Registers) {
+pub extern fn isr_handler(regs: &mut arch::idt::Registers) {
     // TODO: Why?
     arch::idt::isr_handler(regs);
 }

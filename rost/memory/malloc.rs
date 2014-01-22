@@ -24,7 +24,7 @@ pub unsafe fn malloc(size: size_t) -> *mut c_void {
 pub unsafe fn realloc(p: *mut c_void, size: size_t) -> *mut c_void {
     let ptr = malloc(size);
     copy_nonoverlapping_memory(ptr, p as *c_void, size as uint);
-    free(p);
+    free(p as *c_void);
     ptr
 }
 

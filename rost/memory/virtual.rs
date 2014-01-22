@@ -86,7 +86,7 @@ unsafe fn get_table(addr: u32, flags: u32) -> *mut PageTable {
     }
 }
 
-fn page_fault(regs: &idt::Registers) {
+fn page_fault(regs: &mut idt::Registers) {
     let address = read_faulting_address();
 
     let present = regs.err_code & 0x1 != 0;

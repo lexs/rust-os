@@ -94,7 +94,7 @@ static EXCEPTIONS: &'static [&'static str] = &[
     "Virtualization Exception",
 ];
 
-fn dummy_isr_handler(regs: &Registers) {
+fn dummy_isr_handler(regs: &mut Registers) {
     vga::puts("Unhandled interrupt: ");
     util::convert(regs.int_no, |c| vga::putch(c));
     vga::puts(", error: ");
@@ -103,12 +103,12 @@ fn dummy_isr_handler(regs: &Registers) {
     loop {}
 }
 
-fn exception_isr_handler(regs: &Registers) {
+fn exception_isr_handler(regs: &mut Registers) {
     vga::puts(EXCEPTIONS[regs.int_no]);
     loop {}
 }
 
-static mut interrupt_handlers: [fn(regs: &Registers), ..IDT_SIZE] = [
+static mut interrupt_handlers: [fn(regs: &mut Registers), ..IDT_SIZE] = [
     dummy_isr_handler, ..IDT_SIZE
 ];
 
@@ -132,14 +132,14 @@ pub fn init() {
     }
 }
 
-pub fn register_isr_handler(which: uint, f: fn(regs: &Registers)) {
+pub fn register_isr_handler(which: uint, f: fn(regs: &mut Registers)) {
     unsafe {
         interrupt_handlers[which] = f;
     }
 }
 
 #[no_mangle]
-pub extern fn isr_handler(regs: &Registers) {
+pub extern fn isr_handler(regs: &mut Registers) {
     let which = regs.int_no;
 
     // If this is a irq we need to eoi it
