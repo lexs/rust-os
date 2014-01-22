@@ -7,6 +7,7 @@ pub use self::virtual::{
 
 mod physical;
 mod virtual;
+pub mod malloc;
 
 pub fn init() {
     physical::init();
