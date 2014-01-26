@@ -9,16 +9,15 @@ static mut syscalls: [fn(regs: &mut idt::Registers), ..NUM_SYSCALLS] = [
     unimplemented_syscall, ..NUM_SYSCALLS
 ];
 
-macro_rules! syscall1 (
+macro_rules! syscall (
+    // 1 arg
     (fn $name:ident($a0:ident: $t0:ty) $func:expr) => (
         fn $name(regs: &mut idt::Registers) {
             let $a0 = regs.ebx as $t0;
             $func
         }
-    )
-)
-
-macro_rules! syscall3 (
+    );
+    // 3 args
     (fn $name:ident($a0:ident: $t0:ty, $a1:ident: $t1:ty, $a2:ident: $t2:ty) -> $ret:ty $func:expr) => (
         fn $name(regs: &mut idt::Registers) {
             let $a0 = regs.ebx as $t0;
@@ -62,14 +61,14 @@ fn unimplemented_syscall(regs: &mut idt::Registers) {
     console::write_newline();
 }
 
-syscall1!(fn syscall_exit(code: u32) {
+syscall!(fn syscall_exit(code: u32) {
     console::write_str("Syscall exit, code=");
     console::write_num(code);
     console::write_newline();
     loop {}
 })
 
-syscall3!(fn syscall_write(fd: u32, data: *u8, len: u32) -> u32 {
+syscall!(fn syscall_write(fd: u32, data: *u8, len: u32) -> u32 {
     kassert!(fd == 1);
 
     let mut i = 0;

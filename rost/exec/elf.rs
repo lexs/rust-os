@@ -84,16 +84,15 @@ pub fn exec(buffer: *u8) {
     unsafe {
         let header = buffer as *ELFHeader;
 
-        match setup(buffer, header) {
-            Some(entry) => asm!("jmp *$0" :: "r"(entry) :: "volatile"),
-            None => {}
-        }
+        setup(buffer, header).map(|entry| {
+            asm!("jmp *$0" :: "r"(entry) :: "volatile");
+        });
     }
 }
 
 unsafe fn check_magic(ident: *ELFIdent) -> bool {
     static MAGIC: &'static str = "\u007fELF";
-    let ei_mag = &(*ident).ei_mag;
+    let ref ei_mag = (*ident).ei_mag;
 
     ei_mag[0] == MAGIC[0]
         && ei_mag[1] == MAGIC[1]
@@ -143,15 +142,15 @@ unsafe fn setup(buffer: *u8, header: *ELFHeader) -> Option<u32> {
 }
 
 unsafe fn load_segment(buffer: *u8, header: *ProgramHeader) {
-    let mem_size = (*header).p_memsz; // Size in memory
-    let file_size = (*header).p_filesz; // Size in file
+    let mem_size = (*header).p_memsz as uint; // Size in memory
+    let file_size = (*header).p_filesz as uint; // Size in file
     let mem_pos = (*header).p_vaddr as *mut u8; // Position in memory
-    let file_pos = (*header).p_offset; // Position in file
+    let file_pos = (*header).p_offset as int; // Position in file
 
-    memory::map(mem_pos as u32, mem_size, memory::FLAG_PRESENT | translate_flags(header));
+    memory::map(mem_pos as u32, mem_size as u32, memory::FLAG_PRESENT | translate_flags(header));
 
     copy_nonoverlapping_memory(mem_pos, offset(buffer, file_pos as int), file_size as uint);
-    set_memory(mut_offset(mem_pos, (file_pos + file_size) as int), 0, (mem_size - file_size) as uint);
+    set_memory(mut_offset(mem_pos, file_pos + file_size as int), 0, mem_size - file_size);
 }
 
 unsafe fn translate_flags(header: *ProgramHeader) -> u32 {
