@@ -20,6 +20,12 @@ mod core2;
 
 mod util;
 
+fn hello_again() {
+    drivers::vga::puts("Hello again!\n");
+    exec::tasking::schedule();
+    loop {}
+}
+
 #[no_mangle]
 pub extern fn kernel_main() {
     arch::gdt::init();
@@ -33,6 +39,10 @@ pub extern fn kernel_main() {
 
     drivers::vga::clear_screen();
     drivers::vga::puts("Hello world!\n");
+
+    exec::tasking::exec(hello_again);
+
+    exec::tasking::schedule();
 
     extern { static _binary_hello_world_elf_start: u8; }
     let do_nothing = &_binary_hello_world_elf_start as *u8;
