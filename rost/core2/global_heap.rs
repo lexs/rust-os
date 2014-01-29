@@ -38,7 +38,7 @@ pub unsafe fn realloc_raw(ptr: *mut c_void, size: uint) -> *mut c_void {
     // `realloc(ptr, 0)` may allocate, but it may also return a null pointer
     // http://pubs.opengroup.org/onlinepubs/9699919799/functions/realloc.html
     if size == 0 {
-        free(ptr as *c_void);
+        free(ptr);
         0 as *mut c_void
     } else {
         let p = realloc(ptr, size as size_t);
@@ -64,5 +64,5 @@ pub unsafe fn exchange_malloc(size: uintptr_t) -> *c_char {
 #[lang="exchange_free"]
 #[inline]
 pub unsafe fn exchange_free_(ptr: *c_char) {
-    free(ptr as *c_void);
+    free(ptr as *mut c_void);
 }
