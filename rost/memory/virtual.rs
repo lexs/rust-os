@@ -154,7 +154,7 @@ fn page_index(addr: u32) -> u32 {
 
 fn flush_tlb<T>(addr: T) {
     unsafe {
-        asm!("invlpg ($0)" :: "r"(addr) : "volatile", "memory");
+        asm!("invlpg ($0)" :: "r"(addr) :: "volatile", "memory");
     }
 }
 
