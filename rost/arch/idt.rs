@@ -3,7 +3,6 @@ use core::mem::size_of;
 
 use arch::io;
 use drivers::vga;
-use kernel::console;
 use util;
 use util::range;
 
@@ -96,20 +95,11 @@ static EXCEPTIONS: &'static [&'static str] = &[
 ];
 
 fn dummy_isr_handler(regs: &mut Registers) {
-    vga::puts("Unhandled interrupt: ");
-    util::convert(regs.int_no, |c| vga::putch(c));
-    vga::puts(", error: ");
-    util::convert(regs.err_code, |c| vga::putch(c));
-    vga::puts("\n");
-    loop {}
+    panic!("Unhandled interrupt: {}, error: {}", regs.int_no, regs.err_code);
 }
 
 fn exception_isr_handler(regs: &mut Registers) {
-    console::write_str(EXCEPTIONS[regs.int_no]);
-    console::write_str(", error: ");
-    console::write_hex(regs.err_code);
-    console::write_newline();
-    loop {}
+    panic!("{}, error: {x}", EXCEPTIONS[regs.int_no], regs.err_code);
 }
 
 static mut interrupt_handlers: [fn(regs: &mut Registers), ..IDT_SIZE] = [

@@ -1,3 +1,4 @@
+#[macro_escape];
 
 // These currently require a "use core;" at the top of the file because macros can't
 // utilize "use" statements.

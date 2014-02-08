@@ -4,7 +4,6 @@ use core::option::{Option, Some, None};
 
 use core2::ptr::{offset, mut_offset};
 
-use kernel::console;
 use memory;
 
 #[packed]
@@ -103,7 +102,7 @@ unsafe fn check_magic(ident: *ELFIdent) -> bool {
 unsafe fn setup(buffer: *u8, header: *ELFHeader) -> Option<u32> {
     if (*header).e_type != ET_EXEC as u16 {
         // File is not excutable
-        console::write_str("Not executable\n");
+        kprintln!("Not executable");
         return None;
     }
 
@@ -128,9 +127,7 @@ unsafe fn setup(buffer: *u8, header: *ELFHeader) -> Option<u32> {
                 }
             },
             other => {
-                console::write_str("Unsupported ELF segment: ");
-                console::write_num(other as u32);
-                console::write_newline();
+                kprintln!("Unsupported ELF segment: {}", other as u32);
                 return None;
             }
         }

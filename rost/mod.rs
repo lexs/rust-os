@@ -7,11 +7,10 @@ extern mod core;
 
 use core::container::Container;
 
-#[macro_escape]
 mod macros;
 
-mod arch;
 mod kernel;
+mod arch;
 mod drivers;
 mod memory;
 mod exec;
@@ -19,10 +18,6 @@ mod exec;
 mod core2;
 
 mod util;
-
-fn alloc_stack(size: uint) {
-
-}
 
 #[no_mangle]
 pub extern fn kernel_main() {
@@ -38,9 +33,9 @@ pub extern fn kernel_main() {
     drivers::vga::clear_screen();
     drivers::vga::puts("Hello world!\n");
 
-    //loop {}
+    loop {}
 
-    exec::tasking::user_mode(test);
+    //exec::tasking::user_mode(test);
     /*exec::tasking::exec(do_stuff);
     exec::tasking::schedule();
     loop {}*/

@@ -56,16 +56,11 @@ fn syscall_handler(regs: &mut idt::Registers) {
 }
 
 fn unimplemented_syscall(regs: &mut idt::Registers) {
-    console::write_str("Unimplemented syscall, number=");
-    console::write_num(regs.eax);
-    console::write_newline();
+    kprintln!("Unimplemented syscall, number={}", regs.eax);
 }
 
 syscall!(fn syscall_exit(code: u32) {
-    console::write_str("Syscall exit, code=");
-    console::write_num(code);
-    console::write_newline();
-    loop {}
+    panic!("Syscall exit, code={}", code);
 })
 
 syscall!(fn syscall_write(fd: u32, data: *u8, len: u32) -> u32 {
