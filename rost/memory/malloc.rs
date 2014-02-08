@@ -10,7 +10,7 @@ static mut buffer: u32 = 0;
 
 pub unsafe fn malloc(size: size_t) -> *mut c_void {
     while buffer < size {
-        memory::map(heap + buffer, PAGE_SIZE, memory::FLAG_PRESENT | memory::FLAG_WRITE | memory::FLAG_USER);
+        memory::map(heap + buffer, PAGE_SIZE, memory::PRESENT | memory::WRITE | memory::USER);
         buffer += PAGE_SIZE;
     }
 

@@ -13,6 +13,16 @@ macro_rules! define_flags (
             priv flags: $t
         }
 
+        impl $name {
+            fn from_int(value: $t) -> $name {
+                $name { flags: value }
+            }
+
+            fn to_int(self) -> $t {
+                self.flags
+            }
+        }
+
         impl core::ops::BitOr<$name, $name> for $name {
             #[inline(always)]
             fn bitor(&self, other: &$name) -> $name {

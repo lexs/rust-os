@@ -1,8 +1,10 @@
 pub use self::virtual::{
     map,
-    FLAG_PRESENT,
-    FLAG_WRITE,
-    FLAG_USER
+    Flags,
+    NONE,
+    PRESENT,
+    WRITE,
+    USER
 };
 
 mod physical;

@@ -33,6 +33,8 @@ pub extern fn kernel_main() {
     drivers::vga::clear_screen();
     drivers::vga::puts("Hello world!\n");
 
+    do_stuff();
+
     loop {}
 
     //exec::tasking::user_mode(test);

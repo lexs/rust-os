@@ -144,16 +144,16 @@ unsafe fn load_segment(buffer: *u8, header: *ProgramHeader) {
     let mem_pos = (*header).p_vaddr as *mut u8; // Position in memory
     let file_pos = (*header).p_offset as int; // Position in file
 
-    memory::map(mem_pos as u32, mem_size as u32, memory::FLAG_PRESENT | translate_flags(header));
+    memory::map(mem_pos as u32, mem_size as u32, memory::PRESENT | translate_flags(header));
 
     copy_nonoverlapping_memory(mem_pos, offset(buffer, file_pos as int), file_size as uint);
     set_memory(mut_offset(mem_pos, file_pos + file_size as int), 0, mem_size - file_size);
 }
 
-unsafe fn translate_flags(header: *ProgramHeader) -> u32 {
+unsafe fn translate_flags(header: *ProgramHeader) -> memory::Flags {
     if (*header).p_flags & PT_W {
-        memory::FLAG_WRITE
+        memory::WRITE
     } else {
-        0
+        memory::NONE
     }
 }
