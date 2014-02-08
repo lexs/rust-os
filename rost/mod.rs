@@ -89,7 +89,7 @@ fn do_stuff() {
 
 
 #[no_mangle]
-pub extern fn isr_handler(regs: &mut arch::idt::Registers) {
+pub extern fn trap_handler(regs: &mut arch::idt::Registers) {
     // TODO: Why?
-    arch::idt::isr_handler(regs);
+    arch::idt::trap_handler(regs);
 }

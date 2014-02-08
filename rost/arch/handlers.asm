@@ -1,11 +1,12 @@
-; Common stub called by all isr routines
-isr_common_stub:
-    pusha                    ; Pushes edi,esi,ebp,esp,ebx,edx,ecx,eax
+common_trap_handler:
+    push ds
+    push es
+    push fs
+    push gs
 
-    mov ax, ds               ; Lower 16-bits of eax = ds.
-    push eax                 ; save the data segment descriptor
+    pusha
 
-    mov ax, 0x10  ; load the kernel data segment descriptor
+    mov ax, 0x10
     mov ds, ax
     mov es, ax
     mov fs, ax
@@ -13,72 +14,68 @@ isr_common_stub:
 
     push esp
 
-    extern isr_handler
-    call isr_handler
-
+    extern trap_handler
+    call trap_handler
     add esp, 4
 
-    pop eax        ; reload the original data segment descriptor
-    mov ds, ax
-    mov es, ax
-    mov fs, ax
-    mov gs, ax
+    popa
 
-    popa                     ; Pops edi,esi,ebp...
-    add esp, 8     ; Cleans up the pushed error code and pushed ISR number
-    ;sti
-    iret           ; pops 5 things at once: CS, EIP, EFLAGS, SS, and ESP
+    pop gs
+    pop fs
+    pop es
+    pop ds
 
-%macro ISR_HANDLER 1
-    global _isr_handler_%1
+    add esp, 8 ; trap no and err
+    iret
 
-    _isr_handler_%1:
-        ;cli
-        push dword 0 ; push a dummy error code
+%macro TRAP_HANDLER 1
+    global _trap_handler_%1
+
+    _trap_handler_%1:
+        push dword 0 ; push dummy error code
         push dword %1
-        jmp isr_common_stub
+        jmp common_trap_handler
 %endmacro
 
-%macro ISR_HANDLER_ERROR 1
-    global _isr_handler_%1
+%macro TRAP_HANDLER_ERROR 1
+    global _trap_handler_%1
 
-    _isr_handler_%1:
-        ;cli
+    _trap_handler_%1:
         push dword %1
-        jmp isr_common_stub
+        jmp common_trap_handler
 %endmacro
 
-ISR_HANDLER 0
-ISR_HANDLER 1
-ISR_HANDLER 2
-ISR_HANDLER 3
-ISR_HANDLER 4
-ISR_HANDLER 5
-ISR_HANDLER 6
-ISR_HANDLER 7
-ISR_HANDLER_ERROR 8
-ISR_HANDLER 9
-ISR_HANDLER_ERROR 10
-ISR_HANDLER_ERROR 11
-ISR_HANDLER_ERROR 12
-ISR_HANDLER_ERROR 13
-ISR_HANDLER_ERROR 14
+TRAP_HANDLER 0
+TRAP_HANDLER 1
+TRAP_HANDLER 2
+TRAP_HANDLER 3
+TRAP_HANDLER 4
+TRAP_HANDLER 5
+TRAP_HANDLER 6
+TRAP_HANDLER 7
+TRAP_HANDLER_ERROR 8
+TRAP_HANDLER 9
+TRAP_HANDLER_ERROR 10
+TRAP_HANDLER_ERROR 11
+TRAP_HANDLER_ERROR 12
+TRAP_HANDLER_ERROR 13
+TRAP_HANDLER_ERROR 14
 
 %assign i 15
 %rep 256 - 15
-    ISR_HANDLER i
+    TRAP_HANDLER i
 %assign i i+1
 %endrep
 
-global isr_handler_array
-isr_handler_array:
+global trap_handler_array
+trap_handler_array:
 
-%macro ISR_HANDLER_ENTRY 1
-    dd _isr_handler_%1
+%macro TRAP_HANDLER_ENTRY 1
+    dd _trap_handler_%1
 %endmacro
 
 %assign i 0
 %rep 256
-    ISR_HANDLER_ENTRY i
+    TRAP_HANDLER_ENTRY i
 %assign i i+1
 %endrep

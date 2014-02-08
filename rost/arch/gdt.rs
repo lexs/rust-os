@@ -1,6 +1,8 @@
 use core::container::Container;
 use core::mem::{size_of, transmute};
 
+use arch::RING3;
+
 static GDT_SIZE: uint = 6;
 type GdtTable = [GdtEntry, ..GDT_SIZE];
 
@@ -12,7 +14,7 @@ static EXECUTE: u8 = 1 << 3;
 static ALWAYS1: u8 = 1 << 4;
 static PRESENT: u8 = 1 << 7;
 
-static USER: u8 = 3 << 5; // Ring 3
+static USER: u8 = RING3 << 5; // Ring 3
 
 static CODE: u8 = PRESENT | ALWAYS1 | EXECUTE | RW;
 static DATA: u8 = PRESENT | ALWAYS1 | RW;

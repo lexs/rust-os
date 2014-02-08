@@ -45,7 +45,7 @@ pub fn init() {
         // Map the directory itself as the last entry
         (*directory).set_entry(table_index(kernel_directory as u32), directory, FLAG_PRESENT | FLAG_WRITE);
 
-        idt::register_isr_handler(14, page_fault);
+        idt::register_interrupt(14, page_fault);
 
         switch_page_directory(directory);
     }

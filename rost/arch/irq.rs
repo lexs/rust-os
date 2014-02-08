@@ -22,7 +22,7 @@ pub fn init() {
 }
 
 pub fn register_handler(irq: uint, f: fn(regs: &mut idt::Registers)) {
-    idt::register_isr_handler(irq + IRQ_BASE, f);
+    idt::register_interrupt(irq + IRQ_BASE, f);
     enable(irq);
 }
 

@@ -43,7 +43,7 @@ pub fn init() {
         syscalls[2] = syscall_write;
     }
 
-    idt::register_isr_handler(0x80, syscall_handler);
+    idt::register_user_interrupt(0x80, syscall_handler);
 }
 
 fn syscall_handler(regs: &mut idt::Registers) {

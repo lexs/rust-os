@@ -6,6 +6,13 @@ use drivers::vga;
 use util;
 use util::range;
 
+use arch::RING3;
+
+static PRESENT: u8 = 1 << 7;
+static USER: u8 = RING3 << 5;
+
+static INTERRUPT_GATE: u8 = 0xE;
+
 static IDT_SIZE: uint = 256;
 type IdtTable = [IdtEntry, ..IDT_SIZE];
 
@@ -26,8 +33,8 @@ struct IdtPtr {
 
 #[packed]
 pub struct Registers {
-    ds: u32,
     edi: u32, esi: u32, ebp: u32, esp: u32, ebx: u32, edx: u32, ecx: u32, eax: u32,
+    gs: u32, fs: u32, es: u32, ds: u32,
     int_no: u32, err_code: u32,
     eip: u32, cs: u32, eflags: u32, useresp: u32, ss: u32
 }
@@ -41,7 +48,7 @@ impl IdtEntry {
             always0: 0,
             // We must uncomment the OR below when we get to using user-mode.
             // It sets the interrupt gate's privilege level to 3.
-            flags: flags //| 0x60
+            flags: flags //| USER
         }
     }
 }
@@ -94,46 +101,51 @@ static EXCEPTIONS: &'static [&'static str] = &[
     "Virtualization Exception",
 ];
 
-fn dummy_isr_handler(regs: &mut Registers) {
+fn dummy_handler(regs: &mut Registers) {
     panic!("Unhandled interrupt: {}, error: {}", regs.int_no, regs.err_code);
 }
 
-fn exception_isr_handler(regs: &mut Registers) {
+fn exception_handler(regs: &mut Registers) {
     panic!("{}, error: {x}", EXCEPTIONS[regs.int_no], regs.err_code);
 }
 
 static mut interrupt_handlers: [fn(regs: &mut Registers), ..IDT_SIZE] = [
-    dummy_isr_handler, ..IDT_SIZE
+    dummy_handler, ..IDT_SIZE
 ];
-
-// Defined in handlers.s
-extern { static isr_handler_array: [u32, ..IDT_SIZE]; }
 
 pub fn init() {
     unsafe {
-        range(0, IDT_SIZE, |i| {
-            entries[i] = IdtEntry::new(isr_handler_array[i], 0x08, 0x8E);
-        });
-
         table = IdtPtr::new(&entries);
         idt_flush(&table);
         idt_enable();
 
         // Register default exception handlers
         range(0, EXCEPTIONS.len(), |i| {
-            register_isr_handler(i, exception_isr_handler);
+            register_interrupt(i, exception_handler);
         });
     }
 }
 
-pub fn register_isr_handler(which: uint, f: fn(regs: &mut Registers)) {
+pub fn register_user_interrupt(which: uint, f: fn(regs: &mut Registers)) {
+    register_handler(which, INTERRUPT_GATE | USER, f);
+}
+
+pub fn register_interrupt(which: uint, f: fn(regs: &mut Registers)) {
+    register_handler(which, INTERRUPT_GATE, f);
+}
+
+fn register_handler(which: uint, flags: u8, f: fn(regs: &mut Registers)) {
+    // Defined in handlers.asm
+    extern { static trap_handler_array: [u32, ..IDT_SIZE]; }
+
     unsafe {
+        entries[which] = IdtEntry::new(trap_handler_array[which], 0x08, PRESENT | flags);
         interrupt_handlers[which] = f;
     }
 }
 
 #[no_mangle]
-pub extern fn isr_handler(regs: &mut Registers) {
+pub extern fn trap_handler(regs: &mut Registers) {
     let which = regs.int_no;
 
     // If this is a irq we need to eoi it
