@@ -1,5 +1,7 @@
 #log: bochsout.log
 
+magic_break: enabled=1
+
 memory: guest=32, host=32
 
 # Guest clock speed in terms of emulated instructions per virtual second

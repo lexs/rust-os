@@ -20,10 +20,8 @@ mod core2;
 
 mod util;
 
-fn hello_again() {
-    drivers::vga::puts("Hello again!\n");
-    exec::tasking::schedule();
-    loop {}
+fn alloc_stack(size: uint) {
+
 }
 
 #[no_mangle]
@@ -40,9 +38,31 @@ pub extern fn kernel_main() {
     drivers::vga::clear_screen();
     drivers::vga::puts("Hello world!\n");
 
-    exec::tasking::exec(hello_again);
+    //loop {}
 
+    exec::tasking::user_mode(test);
+    /*exec::tasking::exec(do_stuff);
     exec::tasking::schedule();
+    loop {}*/
+
+    /*
+    loop {
+        // As we are running on a small temporary stack we'll defer all work
+        // to a real process.
+        exec::tasking::schedule();
+    }*/
+}
+
+fn test() {
+    unsafe {
+        asm!("cli");
+    }
+    loop {}
+}
+
+fn do_stuff() {
+    drivers::vga::clear_screen();
+    drivers::vga::puts("Hello world!\n");
 
     extern { static _binary_hello_world_elf_start: u8; }
     let do_nothing = &_binary_hello_world_elf_start as *u8;
@@ -54,7 +74,8 @@ pub extern fn kernel_main() {
     }
 
 
-/*
+    loop {}
+    /*
     let chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ ";
     let mut current: uint = 0;
     loop {
@@ -68,8 +89,7 @@ pub extern fn kernel_main() {
         let value = *ptr;
         kernel::console::write_num(value);
     }
-*/
-    loop {}
+    */
 }
 
 

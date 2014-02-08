@@ -20,7 +20,6 @@ static DIRECTORY: u32 = 0xFFFFF000;
 static PAGES: u32 = 0xFFC00000;
 static mut kernel_directory: *mut PageTable = DIRECTORY as *mut PageTable;
 
-
 pub static FLAG_PRESENT: u32 = 1 << 0;
 pub static FLAG_WRITE: u32 = 1 << 1;
 pub static FLAG_USER: u32 = 1 << 2;
@@ -37,11 +36,11 @@ pub fn init() {
         let mut i = 0;
         while i < PAGE_SIZE * NUM_ENTRIES {
             let page = (*table).get_page(i);
-            page.set(i, FLAG_PRESENT | FLAG_WRITE);
+            page.set(i, FLAG_PRESENT | FLAG_WRITE | FLAG_USER);
             i += PAGE_SIZE;
         }
 
-        (*directory).set_entry(0, table, FLAG_PRESENT | FLAG_WRITE);
+        (*directory).set_entry(0, table, FLAG_PRESENT | FLAG_WRITE | FLAG_USER);
 
         // Map the directory itself as the last entry
         (*directory).set_entry(table_index(kernel_directory as u32), directory, FLAG_PRESENT | FLAG_WRITE);

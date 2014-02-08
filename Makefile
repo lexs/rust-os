@@ -21,13 +21,13 @@ RUST_SOURCES := $(shell find rost/ -name '*.rs')
 
 .SUFFIXES: .o .c .rs .asm .bc
 
+kernel.elf: linker.ld rost.o core.o $(OBJECTS) do_nothing.embed hello_world.embed
+	$(LD) -T linker.ld -o $@ rost.o core.o $(OBJECTS) do_nothing.embed hello_world.embed
+
 kernel.iso: kernel.elf
 	$(MKISOFS) -quiet -R -b boot/grub/stage2_eltorito \
 	    -no-emul-boot -boot-load-size 4 -boot-info-table -o $@ -V 'RUST-OS' \
 	    ./iso kernel.elf
-
-kernel.elf: linker.ld rost.o core.o $(OBJECTS) do_nothing.embed hello_world.embed
-	$(LD) -T linker.ld -o $@ rost.o core.o $(OBJECTS) do_nothing.embed hello_world.embed
 
 run: kernel.elf
 	$(QEMU) -kernel kernel.elf

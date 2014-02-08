@@ -3,6 +3,7 @@ use core::mem::size_of;
 
 use arch::io;
 use drivers::vga;
+use kernel::console;
 use util;
 use util::range;
 
@@ -104,7 +105,10 @@ fn dummy_isr_handler(regs: &mut Registers) {
 }
 
 fn exception_isr_handler(regs: &mut Registers) {
-    vga::puts(EXCEPTIONS[regs.int_no]);
+    console::write_str(EXCEPTIONS[regs.int_no]);
+    console::write_str(", error: ");
+    console::write_hex(regs.err_code);
+    console::write_newline();
     loop {}
 }
 

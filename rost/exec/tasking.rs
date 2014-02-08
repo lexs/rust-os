@@ -3,6 +3,7 @@ use core::mem::transmute;
 
 use core2::list::List;
 
+use arch::gdt;
 use kernel::console;
 use memory::malloc::malloc;
 
@@ -25,15 +26,59 @@ static mut current_task: Task = Task {
 
 pub fn exec(f: fn()) {
     let eip: u32 = unsafe { transmute(f) };
-    let stack: u32 = unsafe { transmute(malloc(STACK_SIZE)) };
 
     let new_task = Task {
         pid: aquire_pid(),
-        esp: stack + STACK_SIZE,
+        esp: alloc_stack(STACK_SIZE),
         eip: eip
     };
 
     unsafe { tasks.add(new_task); }
+}
+
+pub fn alloc_stack(size: u32) -> u32 {
+    let stack_top: u32 = unsafe { transmute(malloc(size)) };
+    stack_top + size
+}
+
+fn read_eflags() -> u32 {
+    unsafe {
+        let mut eflags: u32;
+        asm!("pushf; pop $0;" : "=r"(eflags) ::: "volatile");
+        eflags
+    }
+}
+
+pub fn user_mode(f: fn()) {
+    #[packed]
+    struct FakeStack {
+        eip: u32,
+        cs: u32,
+        eflags: u32,
+        esp: u32,
+        ss: u32,
+    };
+
+    let fake_stack = FakeStack {
+        ss: 0x20 | 0x3,
+        esp: alloc_stack(STACK_SIZE),
+        eflags: read_eflags() | 0x200, // Enable interrupts
+        cs: 0x18 | 0x3,
+        eip: f as u32
+    };
+
+    gdt::set_segments(0x20 | 0x3);
+    extern { fn run_iret(stack: FakeStack); }
+    unsafe { run_iret(fake_stack); }
+}
+
+pub fn clone() -> uint {
+    unsafe {
+        let mut new_task = current_task;
+        new_task.pid = aquire_pid();
+        new_task.pid
+    }
+    
 }
 
 pub fn schedule() {
