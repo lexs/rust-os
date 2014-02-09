@@ -5,7 +5,7 @@ use memory;
 
 static PAGE_SIZE: u32 = 0x1000;
 
-static mut heap: u32 = 0x10000000;
+static mut heap: u32 = 0xd0000000;
 static mut buffer: u32 = 0;
 
 pub unsafe fn malloc(size: size_t) -> *mut c_void {

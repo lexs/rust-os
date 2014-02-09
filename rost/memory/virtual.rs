@@ -132,7 +132,7 @@ impl Table<Table<Page>> {
                 // Allocate table
                 let table_physical = physical::allocate_frame();
                 (*kernel_directory).set(addr, table_physical, flags);
-                
+
                 let table = (table_physical & DIRECTORY) as *mut PageTable;
                 // Flush table so we can write to its virtual address
                 flush_tlb(table);
