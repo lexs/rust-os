@@ -1,10 +1,9 @@
-use core::option::{Option, Some, None};
+use core::option::{Some, None};
 use core::mem::transmute;
 
 use core2::list::List;
 
 use arch::gdt;
-use kernel::console;
 use memory::malloc::malloc;
 
 pub struct Task {
@@ -78,7 +77,7 @@ pub fn clone() -> uint {
         new_task.pid = aquire_pid();
         new_task.pid
     }
-    
+
 }
 
 pub fn schedule() {

@@ -1,5 +1,4 @@
 use core;
-use core::option::{Option, Some, None};
 use core::mem::size_of;
 
 use arch::idt;
@@ -123,7 +122,6 @@ impl<U> Table<U> {
 impl Table<Table<Page>> {
     fn fetch_table(&mut self, addr: u32, flags: Flags) -> *mut PageTable {
         let index = addr / (PAGE_SIZE * ENTRIES);
-        let table = self.entries[index];
         match self.entries[index] {
             p @ Page(table_physical) if p.present() => {
                 (table_physical & DIRECTORY) as *mut PageTable

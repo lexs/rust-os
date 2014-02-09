@@ -1,3 +1,5 @@
+#[allow(dead_code)];
+
 pub mod intrinsics;
 pub mod ptr;
 pub mod cast;

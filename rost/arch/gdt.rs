@@ -1,4 +1,3 @@
-use core::container::Container;
 use core::mem::{size_of, transmute};
 
 use arch::RING3;

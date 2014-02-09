@@ -55,7 +55,7 @@ macro_rules! kprintln (
         use core::container::Container;
 
         use kernel::console::write_char;
-        use kernel::printf::{Format, print_formatted};
+        use kernel::printf::print_formatted;
 
         let format: &str = $format;
         let mut i = 0;
@@ -86,7 +86,7 @@ macro_rules! kprintln (
 )
 
 impl<'a> Printable for &'a str {
-    fn print(&self, format: Format, out: |char|) {
+    fn print(&self, _: Format, out: |char|) {
         range(0, self.len(), |i| {
             out(self[i] as char);
         });

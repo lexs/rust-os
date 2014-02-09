@@ -1,9 +1,5 @@
 #[macro_escape];
 
-use core::container::Container;
-
-use drivers::vga;
-
 pub mod printf;
 pub mod console;
 
@@ -23,5 +19,4 @@ macro_rules! panic (
 )
 
 pub fn panic(msg: &str) {
-
 }

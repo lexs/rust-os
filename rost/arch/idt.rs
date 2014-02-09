@@ -2,8 +2,6 @@ use core::container::Container;
 use core::mem::size_of;
 
 use arch::io;
-use drivers::vga;
-use util;
 use util::range;
 
 use arch::RING3;

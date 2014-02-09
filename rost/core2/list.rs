@@ -84,7 +84,7 @@ impl<T> List<T> {
             self.length -= 1;
             front_node
         })
-    } 
+    }
 
     /// Provide a forward iterator
     #[inline]

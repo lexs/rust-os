@@ -8,10 +8,6 @@ pub fn range(start: uint, end: uint, f: |uint|) {
 
 static CHARS: &'static str = "0123456789abcdef";
 
-pub fn convert(value: u32, f: |char|) {
-    convert_radix(value, 10, f);
-}
-
 pub fn convert_radix(value: u32, radix: u32, f: |char|) {
     let mut result: [u8, ..20] = ['0' as u8, ..20];
 

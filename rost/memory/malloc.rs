@@ -1,5 +1,5 @@
 use core::ptr::copy_nonoverlapping_memory;
-use core2::global_heap::{c_void, c_char, size_t, uintptr_t};
+use core2::global_heap::{c_void, size_t};
 
 use memory;
 

@@ -50,13 +50,6 @@ pub extern fn kernel_main() {
     }*/
 }
 
-fn test() {
-    unsafe {
-        asm!("cli");
-    }
-    loop {}
-}
-
 fn do_stuff() {
     drivers::vga::clear_screen();
     drivers::vga::puts("Hello world!\n");
@@ -64,10 +57,10 @@ fn do_stuff() {
     extern { static _binary_hello_world_elf_start: u8; }
     let do_nothing = &_binary_hello_world_elf_start as *u8;
 
-    if unsafe { exec::elf::probe(do_nothing) } {
+    if exec::elf::probe(do_nothing) {
         drivers::vga::puts("Found program!\n");
 
-        unsafe { exec::elf::exec(do_nothing); }
+        exec::elf::exec(do_nothing);
     }
 
 
