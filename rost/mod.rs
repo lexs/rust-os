@@ -34,24 +34,22 @@ pub extern fn kernel_main() {
     drivers::vga::clear_screen();
     drivers::vga::puts("Hello world!\n");
 
-    //do_stuff();
-/*
-    let dir = memory::clone_directory();
-    kprintln!("Directory at {}", dir);
+    exec::tasking::exec(thread2);
+    thread1();
+}
 
-    loop {}
-*/
-    //exec::tasking::user_mode(test);
-    exec::tasking::exec(do_stuff);
-    exec::tasking::schedule();
-    loop {}
-
-    /*
+fn thread1() {
     loop {
-        // As we are running on a small temporary stack we'll defer all work
-        // to a real process.
+        kprintln!("Hello from thread 1");
         exec::tasking::schedule();
-    }*/
+    }
+}
+
+fn thread2() {
+    loop {
+        kprintln!("Hello from thread 2");
+        exec::tasking::schedule();
+    }
 }
 
 fn do_stuff() {

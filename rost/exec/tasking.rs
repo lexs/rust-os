@@ -1,4 +1,4 @@
-use core::option::{Some, None};
+use core::option::{Option, Some, None};
 use core::mem::transmute;
 
 use core2::list::List;
@@ -17,18 +17,18 @@ pub struct Task {
 static STACK_SIZE: u32 = 8 * 1024;
 
 static mut next_pid: uint = 1;
-static mut tasks: List<Task> = List { head: None, length: 0 };
+static mut tasks: List<~Task> = List { head: None, length: 0 };
 
-static mut current_task: Task = Task {
-        pid: 0,
-        esp: 0,
-        eip: 0,
-        pd: 0
-};
+static mut current_task: Option<~Task> = None;
 
 pub fn init() {
     unsafe {
-        current_task.pd = memory::kernel_directory;
+        current_task = Some(~Task {
+            pid: 0,
+            esp: 0,
+            eip: 0,
+            pd: memory::kernel_directory
+        });
     }
 }
 
@@ -37,7 +37,7 @@ pub fn exec(f: fn()) {
 
     let p = alloc_stack(STACK_SIZE);
 
-    let new_task = Task {
+    let new_task = ~Task {
         pid: aquire_pid(),
         esp: alloc_stack(STACK_SIZE),
         eip: eip,
@@ -85,34 +85,24 @@ pub fn user_mode(f: fn()) {
     unsafe { run_iret(fake_stack); }
 }
 
-pub fn clone() -> uint {
-    unsafe {
-        let mut new_task = current_task;
-        new_task.pid = aquire_pid();
-        new_task.pid
-    }
-
-}
-
 pub fn schedule() {
-    let next_task = match unsafe { tasks.pop_front() } {
-        None => return,
-        Some(task) => task
-    };
+    unsafe {
+        new_task.pid = aquire_pid();
+            None => return,
+        };
+        let (last_task, next_task) = match current_task.take() {
+            Some(current) => unsafe {
+                current_task = Some(task);
+                (tasks.front_mut().get(), current_task.as_ref().get())
+            }
+        };
 
-    let last_task = unsafe {
-        tasks.add(current_task);
-        current_task = next_task;
-        tasks.front_mut().get()
-    };
-
-    unsafe { switch_to(last_task, &current_task); }
+        switch_to(last_task, next_task);
+    }
 }
 
 #[inline(never)] // We can't inline because then the label "resume" would fail to be found
-unsafe fn switch_to(prev: &mut Task, next: &Task) {
-    memory::switch_page_directory(next.pd);
-
+unsafe fn switch_to(prev: &mut ~Task, next: &~Task) {
     // These blocks are split in two because we need to guarantee that the store
     // into prev.esp and prev.eip happens BEFORE the jmp. Optimally we would like
     // to use "=m" as a constraint but rustc/llvm doesn't seem to like that.
@@ -122,6 +112,9 @@ unsafe fn switch_to(prev: &mut Task, next: &Task) {
         mov %esp, $0;
         lea resume, $1;"
         : "=r"(prev.esp), "=r"(prev.eip) ::: "volatile");
+
+    memory::switch_page_directory(next.pd);
+
     asm!(
        "mov $0, %esp;
        sti;
