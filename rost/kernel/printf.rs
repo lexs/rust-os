@@ -93,6 +93,28 @@ impl<'a> Printable for &'a str {
     }
 }
 
+impl<'a> Printable for bool {
+    fn print(&self, format: Format, out: |char|) {
+        if *self {
+            "true".print(Default, out);
+        } else {
+            "false".print(Default, out);
+        }
+    }
+}
+
+impl<'a, T> Printable for *T {
+    fn print(&self, format: Format, out: |char|) {
+        convert_radix(*self as u32, 16, out);
+    }
+}
+
+impl<'a, T> Printable for *mut T {
+    fn print(&self, format: Format, out: |char|) {
+        convert_radix(*self as u32, 16, out);
+    }
+}
+
 macro_rules! printable_integer (
     ($t:ty) => (
         impl<'a> Printable for $t {

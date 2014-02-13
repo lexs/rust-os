@@ -27,20 +27,24 @@ pub extern fn kernel_main() {
     drivers::init();
 
     memory::init();
+    exec::tasking::init();
 
     exec::syscalls::init();
 
     drivers::vga::clear_screen();
     drivers::vga::puts("Hello world!\n");
 
-    do_stuff();
+    //do_stuff();
+/*
+    let dir = memory::clone_directory();
+    kprintln!("Directory at {}", dir);
 
     loop {}
-
+*/
     //exec::tasking::user_mode(test);
-    /*exec::tasking::exec(do_stuff);
+    exec::tasking::exec(do_stuff);
     exec::tasking::schedule();
-    loop {}*/
+    loop {}
 
     /*
     loop {
@@ -51,7 +55,7 @@ pub extern fn kernel_main() {
 }
 
 fn do_stuff() {
-    drivers::vga::clear_screen();
+    //drivers::vga::clear_screen();
     drivers::vga::puts("Hello world!\n");
 
     extern { static _binary_hello_world_elf_start: u8; }
