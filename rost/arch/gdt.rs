@@ -126,9 +126,9 @@ pub fn init() {
     }
 }
 
-pub fn set_kernel_stack(esp: u32) {
+pub fn set_kernel_stack(stack_top: u32) {
     unsafe {
-        tss.esp0 = esp;
+        tss.esp0 = stack_top;
     }
 }
 

@@ -1,17 +1,19 @@
 use core::option::{Option, Some, None};
-use core::mem::transmute;
+use core::mem::{transmute, size_of};
 
 use core2::list::List;
 
-use arch::gdt;
+use arch::{gdt, idt};
 use memory;
 use memory::malloc::malloc;
 
+type KernelStack = [u8, ..1024];
 pub struct Task {
     pid: uint,
     esp: u32,
     eip: u32,
-    pd: u32
+    pd: u32,
+    kernel_stack: KernelStack
 }
 
 static STACK_SIZE: u32 = 8 * 1024;
@@ -21,13 +23,21 @@ static mut tasks: List<~Task> = List { head: None, length: 0 };
 
 static mut current_task: Option<~Task> = None;
 
+impl Task {
+    pub fn stack_top(&self) -> u32 {
+        let stack_bottom: u32 = unsafe { transmute(&self.kernel_stack) };
+        stack_bottom - size_of::<KernelStack>() as u32
+    }
+}
+
 pub fn init() {
     unsafe {
         current_task = Some(~Task {
             pid: 0,
             esp: 0,
             eip: 0,
-            pd: memory::kernel_directory
+            pd: memory::kernel_directory,
+            kernel_stack: [0, ..1024]
         });
     }
 }
@@ -37,13 +47,15 @@ pub fn exec(f: fn()) {
 
     let p = alloc_stack(STACK_SIZE);
 
-    let new_task = ~Task {
+    let mut new_task = ~Task {
         pid: aquire_pid(),
-        esp: alloc_stack(STACK_SIZE),
+        esp: 0,
         eip: eip,
-        pd: memory::clone_directory()
+        pd: memory::clone_directory(),
+        kernel_stack: [0, ..1024]
     };
 
+    new_task.esp = new_task.stack_top();
     kprintln!("Stack is at {x}", new_task.esp);
 
     unsafe { tasks.add(new_task); }
@@ -87,11 +99,15 @@ pub fn user_mode(f: fn()) {
 
 pub fn schedule() {
     unsafe {
-        new_task.pid = aquire_pid();
+        let task = match tasks.pop_front() {
             None => return,
+            Some(task) => task
         };
+
         let (last_task, next_task) = match current_task.take() {
+            None => panic!("No current task, is tasking initialized?"),
             Some(current) => unsafe {
+                tasks.add(current);
                 current_task = Some(task);
                 (tasks.front_mut().get(), current_task.as_ref().get())
             }
@@ -113,6 +129,7 @@ unsafe fn switch_to(prev: &mut ~Task, next: &~Task) {
         lea resume, $1;"
         : "=r"(prev.esp), "=r"(prev.eip) ::: "volatile");
 
+    gdt::set_kernel_stack(next.stack_top());
     memory::switch_page_directory(next.pd);
 
     asm!(
