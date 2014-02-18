@@ -5,6 +5,11 @@ use core::option::{Option, Some, None};
 use core2::ptr::{offset, mut_offset};
 
 use memory;
+use exec::tasking;
+
+// FIXME: Where should the stack go?
+static STACK_POSITION: u32 = 0x5600000;
+static STACK_SIZE: u32 = 8 * 1024;
 
 #[packed]
 struct ELFIdent {
@@ -84,7 +89,10 @@ pub fn exec(buffer: *u8) {
         let header = buffer as *ELFHeader;
 
         setup(buffer, header).map(|entry| {
-            asm!("jmp *$0" :: "r"(entry) :: "volatile");
+            memory::map(STACK_POSITION, STACK_SIZE, memory::PRESENT | memory::USER | memory::WRITE);
+
+            let stack_top = STACK_POSITION + STACK_SIZE;
+            tasking::user_mode(entry, stack_top)
         });
     }
 }
@@ -144,7 +152,7 @@ unsafe fn load_segment(buffer: *u8, header: *ProgramHeader) {
     let mem_pos = (*header).p_vaddr as *mut u8; // Position in memory
     let file_pos = (*header).p_offset as int; // Position in file
 
-    memory::map(mem_pos as u32, mem_size as u32, memory::PRESENT | translate_flags(header));
+    memory::map(mem_pos as u32, mem_size as u32, memory::PRESENT | memory::USER | translate_flags(header));
 
     copy_nonoverlapping_memory(mem_pos, offset(buffer, file_pos as int), file_size as uint);
     set_memory(mut_offset(mem_pos, file_pos + file_size as int), 0, mem_size - file_size);

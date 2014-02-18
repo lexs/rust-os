@@ -21,8 +21,8 @@ RUST_SOURCES := $(shell find rost/ -name '*.rs')
 
 .SUFFIXES: .o .c .rs .asm .bc
 
-kernel.elf: linker.ld rost.o core.o $(OBJECTS) do_nothing.embed hello_world.embed
-	$(LD) -T linker.ld -o $@ rost.o core.o $(OBJECTS) do_nothing.embed hello_world.embed
+kernel.elf: linker.ld rost.o core.o $(OBJECTS) do_nothing.embed hello_world.embed test_fork.embed
+	$(LD) -T linker.ld -o $@ rost.o core.o $(OBJECTS) do_nothing.embed hello_world.embed test_fork.embed
 
 kernel.iso: kernel.elf
 	$(MKISOFS) -quiet -R -b boot/grub/stage2_eltorito \

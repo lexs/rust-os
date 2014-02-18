@@ -6,6 +6,8 @@ use util::range;
 
 use arch::RING3;
 
+use exec::tasking;
+
 static PRESENT: u8 = 1 << 7;
 static USER: u8 = RING3 << 5;
 
@@ -144,6 +146,14 @@ fn register_handler(which: uint, flags: u8, f: fn(regs: &mut Registers)) {
 
 #[no_mangle]
 pub extern fn trap_handler(regs: &mut Registers) {
+    unsafe {
+        // TODO: Tasking should been initialized before we receive
+        // an interrupt
+        tasking::current_task.as_mut().map(|task| {
+            task.regs = regs as *mut Registers;
+        });
+    }
+
     let which = regs.int_no;
 
     // If this is a irq we need to eoi it

@@ -2,6 +2,7 @@ use core2::ptr::offset;
 
 use arch::idt;
 use kernel::console;
+use exec::tasking;
 
 static NUM_SYSCALLS: uint = 128;
 
@@ -10,6 +11,12 @@ static mut syscalls: [fn(regs: &mut idt::Registers), ..NUM_SYSCALLS] = [
 ];
 
 macro_rules! syscall (
+    // no args
+    (fn $name:ident() -> $ret:ty $func:expr) => (
+        fn $name(regs: &mut idt::Registers) {
+            regs.eax = { $func } as $ret;
+        }
+    );
     // 1 arg
     (fn $name:ident($a0:ident: $t0:ty) $func:expr) => (
         fn $name(regs: &mut idt::Registers) {
@@ -34,13 +41,14 @@ macro_rules! syscall (
             $func
         }
     );
-    
+
 )
 
 pub fn init() {
     unsafe {
         syscalls[1] = syscall_exit;
         syscalls[2] = syscall_write;
+        syscalls[3] = syscall_fork;
     }
 
     idt::register_user_interrupt(0x80, syscall_handler);
@@ -60,7 +68,8 @@ fn unimplemented_syscall(regs: &mut idt::Registers) {
 }
 
 syscall!(fn syscall_exit(code: u32) {
-    panic!("Syscall exit, code={}", code);
+    kprintln!("Syscall exit, code={}, scheduling other thread", code);
+    tasking::schedule();
 })
 
 syscall!(fn syscall_write(fd: u32, data: *u8, len: u32) -> u32 {
@@ -74,4 +83,8 @@ syscall!(fn syscall_write(fd: u32, data: *u8, len: u32) -> u32 {
         i += 1;
     }
     i
+})
+
+syscall!(fn syscall_fork() -> u32 {
+    tasking::fork()
 })

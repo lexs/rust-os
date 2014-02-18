@@ -18,6 +18,9 @@ common_trap_handler:
     call trap_handler
     add esp, 4
 
+global ret_from_trap
+ret_from_trap:
+
     popa
 
     pop gs

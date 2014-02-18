@@ -79,8 +79,6 @@ pub fn map(addr: u32, size: u32, flags: Flags) {
             current_addr += PAGE_SIZE;
         }
 
-        *(addr as *mut u8) = 5;
-
         let page = (*current_directory).get_page(addr);
     }
 }
@@ -140,9 +138,9 @@ unsafe fn new_directory() -> u32 {
 }
 
 unsafe fn copy_page(src: u32, dst: u32) {
-    (*current_directory).set_page(TEMP1, src, PRESENT | WRITE);
+    (*current_directory).set_page(TEMP1, src, PRESENT);
     (*current_directory).set_page(TEMP2, dst, PRESENT | WRITE);
-    copy_nonoverlapping_memory(dst as *mut (), src as *(), PAGE_SIZE as uint);
+    copy_nonoverlapping_memory(TEMP2 as *mut u8, TEMP1 as *u8, PAGE_SIZE as uint);
 }
 
 fn page_fault(regs: &mut idt::Registers) {
@@ -178,7 +176,7 @@ impl Page {
 
     fn flags(self) -> Flags {
         match self {
-            Page(value) => Flags::from_int(value)
+            Page(value) => Flags::from_int(value & !PAGE_MASK)
         }
     }
 
@@ -218,7 +216,7 @@ impl Table<Table<Page>> {
                 let table = self.table_at(index);
                 (*table).get(addr)
             },
-            _ => Page(0)
+            _ => Page::empty()
         }
     }
 
