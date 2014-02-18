@@ -2,7 +2,7 @@ use core::option::{Option, Some, None};
 use core::mem::{transmute, size_of};
 use core::ptr::copy_nonoverlapping_memory;
 
-use core2::list::List;
+use core2::list::{List, Node, Rawlink};
 use core2::ptr::mut_offset;
 
 use arch::{gdt, idt};
@@ -22,7 +22,7 @@ pub struct Task {
 static STACK_SIZE: u32 = 16 * 1024;
 
 static mut next_pid: uint = 1;
-static mut tasks: List<~Task> = List { head: None, length: 0 };
+static mut tasks: List<~Task> = List { head: None, tail: Rawlink { p: 0 as *mut Node<~Task> }, length: 0 };
 
 pub static mut current_task: Option<~Task> = None;
 
@@ -73,7 +73,7 @@ pub fn exec(f: fn()) {
 
     new_task.esp = new_task.stack_top();
 
-    unsafe { tasks.add(new_task); }
+    unsafe { tasks.append(new_task); }
 }
 
 pub fn fork() -> uint {
@@ -97,7 +97,7 @@ pub fn fork() -> uint {
 
         let child_pid = new_task.pid;
 
-        tasks.add(new_task);
+        tasks.append(new_task);
 
         child_pid
     }
@@ -149,9 +149,9 @@ pub fn schedule() {
         let (last_task, next_task) = match current_task.take() {
             None => panic!("No current task, is tasking initialized?"),
             Some(current) => unsafe {
-                tasks.add(current);
+                tasks.append(current);
                 current_task = Some(task);
-                (tasks.front_mut().get(), current_task.as_ref().get())
+                (tasks.back_mut().get(), current_task.as_ref().get())
             }
         };
 

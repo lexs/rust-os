@@ -1,13 +1,26 @@
 #include "syscalls.h"
 
-void _start() {
-    unsigned pid = fork();
+unsigned strlen(const char* str) {
+    const char* s;
+    for (s = str; *s; ++s);
+    return s - str;
+}
 
-    if (pid == 0) {
-        write(1, "Child\n", 6);
-    } else {
-        write(1, "Parent\n", 7);
+void loop(const char* message) {
+    while (1) {
+        write(1, message, strlen(message));
+        sleep(100);
     }
+}
 
-    exit(0);
+void _start() {
+    if (fork() != 0) {
+        loop("Parent\n");
+    } else {
+        if (fork() != 0) {
+            loop("Child 1\n");
+        } else {
+            loop("Child 2\n");
+        }
+    }
 }

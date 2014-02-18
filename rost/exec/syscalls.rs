@@ -3,6 +3,7 @@ use core2::ptr::offset;
 use arch::idt;
 use kernel::console;
 use exec::tasking;
+use drivers::timer;
 
 static NUM_SYSCALLS: uint = 128;
 
@@ -49,6 +50,7 @@ pub fn init() {
         syscalls[1] = syscall_exit;
         syscalls[2] = syscall_write;
         syscalls[3] = syscall_fork;
+        syscalls[4] = syscall_sleep;
     }
 
     idt::register_user_interrupt(0x80, syscall_handler);
@@ -87,4 +89,14 @@ syscall!(fn syscall_write(fd: u32, data: *u8, len: u32) -> u32 {
 
 syscall!(fn syscall_fork() -> u32 {
     tasking::fork()
+})
+
+syscall!(fn syscall_sleep(duration: u32) {
+    // FIXME: We can't interrupt here so do a pseudo-sleep
+    let mut i = 0;
+    while i < duration * 1000000 {
+        unsafe { asm!("nop" :::: "volatile"); }
+        i += 1;
+    }
+    tasking::schedule();
 })

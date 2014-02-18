@@ -11,3 +11,7 @@ unsigned fork() {
     asm volatile("int $0x80" : "=a"(value) : "a"(3));
     return value;
 }
+
+void sleep(int duration) {
+    asm volatile("int $0x80" :: "a"(4), "b"(duration));
+}

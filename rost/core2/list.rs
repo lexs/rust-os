@@ -1,17 +1,23 @@
 use core::option::{Option, Some, None};
+use core::mem::transmute;
 use core::iter::Iterator;
 use core::container::Container;
 
 use core2::util;
 
 type Link<T> = Option<~Node<T>>;
-struct Node<T> {
+pub struct Node<T> {
     value: T,
     next: Link<T>
 }
 
+pub struct Rawlink<T> {
+    p: *mut T
+}
+
 pub struct List<T> {
     head: Link<T>,
+    tail: Rawlink<Node<T>>,
     length: uint
 }
 
@@ -40,7 +46,6 @@ macro_rules! list (
     ($($value:expr),*) => (
         List { head: link!( $($value)* ), length: count!( $($value)* ) }
     );
-
 )
 
 impl<T> Node<T> {
@@ -49,9 +54,35 @@ impl<T> Node<T> {
     }
 }
 
+impl<T> Rawlink<T> {
+    fn none() -> Rawlink<T> {
+        Rawlink { p: 0 as *mut T }
+    }
+
+    fn some(n: &mut T) -> Rawlink<T> {
+        Rawlink { p: n }
+    }
+
+    fn resolve_immut(&self) -> Option<&T> {
+        if self.p == 0 as *mut T {
+            None
+        } else {
+            Some(unsafe { transmute(self.p) })
+        }
+    }
+
+    fn resolve(&mut self) -> Option<&mut T> {
+        if self.p == 0 as *mut T {
+            None
+        } else {
+            Some(unsafe { transmute(self.p) })
+        }
+    }
+}
+
 impl<T> List<T> {
     pub fn new() -> List<T> {
-        List { head: None, length: 0 }
+        List { head: None, tail: Rawlink::none(), length: 0 }
     }
 
     pub fn front<'a>(&'a self) -> Option<&'a T> {
@@ -66,10 +97,39 @@ impl<T> List<T> {
         })
     }
 
-    pub fn add(&mut self, value: T) {
+    pub fn back<'a>(&'a self) -> Option<&'a T> {
+        self.tail.resolve_immut().map(|node| {
+            &node.value
+        })
+    }
+
+    pub fn back_mut<'a>(&'a mut self) -> Option<&'a mut T> {
+        self.tail.resolve().map(|node| {
+            &mut node.value
+        })
+    }
+
+    pub fn prepend(&mut self, value: T) {
         let tail = util::replace(&mut self.head, None);
-        self.head = Some(~Node::new(value, tail));
+        let mut head = ~Node::new(value, tail);
+        match self.tail.resolve() {
+            None => self.tail = Rawlink::some(head),
+            _ => {}
+        }
+        self.head = Some(head);
         self.length += 1;
+    }
+
+    pub fn append(&mut self, value: T) {
+        match self.tail.resolve() {
+            None => return self.prepend(value),
+            Some(tail) => {
+                let mut new_tail = ~Node::new(value, None);
+                self.tail = Rawlink::some(new_tail);
+                tail.next = Some(new_tail);
+                self.length += 1;
+            }
+        }
     }
 
     pub fn pop_front(&mut self) -> Option<T> {
@@ -80,7 +140,10 @@ impl<T> List<T> {
 
     fn pop_front_node(&mut self) -> Option<~Node<T>> {
         self.head.take().map(|mut front_node| {
-            self.head = front_node.next.take();
+            match front_node.next.take() {
+                Some(node) => self.head = Some(node),
+                None => self.tail = Rawlink::none()
+            }
             self.length -= 1;
             front_node
         })
