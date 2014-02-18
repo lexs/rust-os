@@ -57,6 +57,10 @@ pub fn puts(s: &str) {
 
 pub fn putch(c: char) {
     unsafe {
+        if cursor_y > ROWS {
+            clear_screen();
+        }
+
         do_putch(c);
         update_cursor();
     }
