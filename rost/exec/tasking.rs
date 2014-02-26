@@ -57,6 +57,20 @@ pub fn get_current_task() -> &mut ~Task {
     }
 }
 
+pub fn kill() {
+    unsafe {
+        if get_current_task().pid == 0 {
+            panic!("Can not kill idle task");
+        }
+
+        unsafe {
+            let next = tasks.pop_front().get();
+            current_task = Some(next);
+            replace_current(get_current_task());
+        }
+    }
+}
+
 pub fn exec(f: fn()) {
     let eip: u32 = unsafe { transmute(f) };
 
@@ -180,6 +194,13 @@ unsafe fn switch_to(prev: &mut ~Task, next: &~Task) {
        jmp *$1;
        resume:
        pop %ebp;"
+       :: "m"(next.esp), "m"(next.eip) :: "volatile");
+}
+
+unsafe fn replace_current(next: &~Task) {
+    asm!(
+       "mov $0, %esp;
+       jmp *$1;"
        :: "m"(next.esp), "m"(next.eip) :: "volatile");
 }
 

@@ -70,8 +70,9 @@ fn unimplemented_syscall(regs: &mut idt::Registers) {
 }
 
 syscall!(fn syscall_exit(code: u32) {
-    kprintln!("Syscall exit, code={}, scheduling other thread", code);
-    tasking::schedule();
+    let pid = tasking::get_current_task().pid;
+    kprintln!("Process {} exit with code {}", pid, code);
+    tasking::kill();
 })
 
 syscall!(fn syscall_write(fd: u32, data: *u8, len: u32) -> u32 {
