@@ -2,7 +2,6 @@ use core::prelude::*;
 use core::mem::size_of;
 
 use arch::io;
-use util::range;
 
 use arch::RING3;
 
@@ -122,9 +121,9 @@ pub fn init() {
         idt_enable();
 
         // Register default exception handlers
-        range(0, EXCEPTIONS.len(), |i| {
+        for i in range(0, EXCEPTIONS.len()) {
             register_interrupt(i, exception_handler);
-        });
+        }
     }
 }
 

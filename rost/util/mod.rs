@@ -5,14 +5,6 @@ use core::prelude::*;
 pub mod list;
 mod mem;
 
-pub fn range(start: uint, end: uint, f: |uint|) {
-    let mut i = start;
-    while i < end {
-        f(i);
-        i += 1;
-    }
-}
-
 static CHARS: &'static str = "0123456789abcdef";
 pub fn convert_radix(value: u32, radix: u32, f: |char|) {
     let mut result: [char, ..20] = ['0', ..20];

@@ -2,7 +2,6 @@ use core::prelude::*;
 use core::intrinsics::volatile_store;
 
 use arch::io;
-use util::range;
 
 #[repr(u8)]
 enum Color {
@@ -65,13 +64,11 @@ pub fn putch(c: char) {
 }
 
 pub fn clear_screen() {
-    range(0, COLS, |x| {
-        range(0, ROWS, |y| {
-            unsafe {
-                write(y, x, Character::make(' ', White, Black));
-            }
-        })
-    });
+    for x in range(0, COLS) {
+        for y in range(0, ROWS) {
+            unsafe { write(y, x, Character::make(' ', White, Black)); }
+        }
+    }
     move_cursor(0, 0);
 }
 
