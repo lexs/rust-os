@@ -9,14 +9,19 @@ macro_rules! panic (
         loop {}
     });
     ($format:expr) => ({
-        kprintln!(concat!("PANIC: ", $format));
+        use kernel::console::write_str;
+        write_str("PANIC: ");
+        kprintln!($format);
         panic!();
     });
     ($format:expr, $($arg:expr),*) => ({
-        kprintln!(concat!("PANIC: ", $format), $($arg),*);
+        use kernel::console::write_str;
+        write_str("PANIC: ");
+        kprintln!($format, $($arg),*);
         panic!();
     })
 )
 
 pub fn panic(msg: &str) {
+    panic!(msg);
 }
