@@ -1,4 +1,4 @@
-use core::container::Container;
+use core::prelude::*;
 
 use arch::irq;
 use arch::idt;
@@ -59,9 +59,9 @@ fn write(scancode: u8) {
 
     let c: char = unsafe {
         if shifted ^ caps_lock {
-            KEYMAP_SHIFTED[scancode] as char
+            KEYMAP_SHIFTED.char_at(scancode as uint)
         } else {
-            KEYMAP[scancode] as char
+            KEYMAP.char_at(scancode as uint)
         }
     };
 

@@ -1,10 +1,10 @@
-#[macro_escape];
+#![macro_escape]
 
-use core::container::Container;
+use core::prelude::*;
 
 use kernel::panic;
 use kernel::console::write_char;
-use util::{range, convert_radix};
+use util::convert_radix;
 
 pub enum Format {
     Default,
@@ -20,11 +20,11 @@ pub fn print_formatted<T : Printable>(format: &str, start: uint, value: T) -> ui
 
     let mut i = start;
 
-    kassert!(format[i] as char == '{');
+    kassert!(format.char_at(i) == '{');
     i += 1;
 
     while i < format.len() {
-        let c = format[i] as char;
+        let c = format.char_at(i);
         i += 1;
 
         match c {
@@ -52,7 +52,7 @@ macro_rules! kprintln (
         write_char('\n');
     });
     ($format:expr, $($arg:expr),*) => ({
-        use core::container::Container;
+        use core::prelude::*;
 
         use kernel::console::write_char;
         use kernel::printf::print_formatted;
@@ -62,7 +62,7 @@ macro_rules! kprintln (
 
         $(
         while i < format.len() {
-            match format[i] as char {
+            match format.char_at(i) {
                 '{' => {
                     i += print_formatted(format, i, $arg);
                     break;
@@ -77,7 +77,7 @@ macro_rules! kprintln (
 
         // Print remaining
         while i < format.len() {
-            write_char(format[i] as char);
+            write_char(format.char_at(i));
             i += 1;
         }
 
@@ -87,14 +87,14 @@ macro_rules! kprintln (
 
 impl<'a> Printable for &'a str {
     fn print(&self, _: Format, out: |char|) {
-        range(0, self.len(), |i| {
-            out(self[i] as char);
-        });
+        for c in self.chars() {
+            out(c);
+        }
     }
 }
 
 impl<'a> Printable for bool {
-    fn print(&self, format: Format, out: |char|) {
+    fn print(&self, _: Format, out: |char|) {
         if *self {
             "true".print(Default, out);
         } else {
@@ -103,14 +103,14 @@ impl<'a> Printable for bool {
     }
 }
 
-impl<'a, T> Printable for *T {
-    fn print(&self, format: Format, out: |char|) {
+impl<'a, T> Printable for *const T {
+    fn print(&self, _: Format, out: |char|) {
         convert_radix(*self as u32, 16, out);
     }
 }
 
 impl<'a, T> Printable for *mut T {
-    fn print(&self, format: Format, out: |char|) {
+    fn print(&self, _: Format, out: |char|) {
         convert_radix(*self as u32, 16, out);
     }
 }

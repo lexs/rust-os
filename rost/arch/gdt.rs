@@ -18,6 +18,7 @@ static USER: u8 = RING3 << 5; // Ring 3
 static CODE: u8 = PRESENT | ALWAYS1 | EXECUTE | RW;
 static DATA: u8 = PRESENT | ALWAYS1 | RW;
 
+#[allow(dead_code)]
 #[packed]
 struct GdtEntry {
     limit_low: u16,
@@ -31,9 +32,10 @@ struct GdtEntry {
 #[packed]
 struct GdtPtr {
     limit: u16,
-    base: *GdtTable
+    base: *const GdtTable
 }
 
+#[allow(dead_code)]
 #[packed]
 struct TssEntry {
     prev_tss: u32,
@@ -65,7 +67,7 @@ impl GdtEntry {
 }
 
 impl GdtPtr {
-    fn new(table: *GdtTable) -> GdtPtr {
+    fn new(table: *const GdtTable) -> GdtPtr {
         GdtPtr {
             limit: size_of::<GdtTable>() as u16,
             base: table
@@ -92,7 +94,7 @@ static mut entries: GdtTable = [
     }, ..GDT_SIZE
 ];
 
-static mut table: GdtPtr = GdtPtr { limit: 0, base: 0 as *GdtTable };
+static mut table: GdtPtr = GdtPtr { limit: 0, base: 0 as *const GdtTable };
 
 static mut tss: TssEntry = TssEntry {
     prev_tss: 0,
@@ -160,10 +162,12 @@ fn set_all_segments(dataseg: u16) {
     }
 }
 
-unsafe fn gdt_flush(ptr: *GdtPtr, codeseg: u16, dataseg: u16) {
+unsafe fn gdt_flush(ptr: *const GdtPtr, codeseg: u16, dataseg: u16) {
     asm!("lgdt ($0)" :: "r"(ptr) :: "volatile");
-    asm!("jmp $0, $$.g; .g:" :: "Ir"(codeseg) :: "volatile");
-    set_all_segments(dataseg);
+
+    set_all_segments(0x10);
+    extern { fn load_code_segment(); }
+    load_code_segment();
 }
 
 unsafe fn tss_flush(seg: u16) {

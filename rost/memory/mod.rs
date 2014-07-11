@@ -1,4 +1,4 @@
-pub use self::virtual::{
+pub use self::virt::{
     kernel_directory,
     map,
     clone_directory,
@@ -11,10 +11,10 @@ pub use self::virtual::{
 };
 
 mod physical;
-mod virtual;
+mod virt;
 pub mod malloc;
 
 pub fn init() {
     physical::init();
-    virtual::init();
+    virt::init();
 }

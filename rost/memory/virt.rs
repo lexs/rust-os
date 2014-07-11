@@ -74,7 +74,8 @@ pub fn map(addr: u32, size: u32, flags: Flags) {
         while current_addr < addr + size {
             let table = (*current_directory).fetch_table(current_addr, flags);
 
-            (*table).set(current_addr, physical::allocate_frame(), flags);
+            let phys_addr = physical::allocate_frame();
+            (*table).set(current_addr, phys_addr, flags);
 
             current_addr += PAGE_SIZE;
         }
@@ -140,7 +141,7 @@ unsafe fn new_directory() -> u32 {
 unsafe fn copy_page(src: u32, dst: u32) {
     (*current_directory).set_page(TEMP1, src, PRESENT);
     (*current_directory).set_page(TEMP2, dst, PRESENT | WRITE);
-    copy_nonoverlapping_memory(TEMP2 as *mut u8, TEMP1 as *u8, PAGE_SIZE as uint);
+    copy_nonoverlapping_memory(TEMP2 as *mut u8, TEMP1 as *const u8, PAGE_SIZE as uint);
 }
 
 fn page_fault(regs: &mut idt::Registers) {
@@ -187,13 +188,13 @@ impl Page {
 
 impl<U> Table<U> {
     fn empty() -> Table<U> {
-        Table { entries: [Page::empty(), ..ENTRIES] }
+        Table { entries: [Page::empty(), ..ENTRIES as uint] }
     }
 
     fn get(&mut self, addr: u32) -> Page {
         let level = size_of::<U>() / size_of::<Page>();
         let index = (addr / (PAGE_SIZE * level as u32)) % ENTRIES;
-        self.entries[index]
+        self.entries[index as uint]
     }
 
     fn set(&mut self, addr: u32, phys: u32, flags: Flags) {
@@ -203,7 +204,7 @@ impl<U> Table<U> {
     fn set_at(&mut self, addr: u32, page: Page) {
         let level = size_of::<U>() / size_of::<Page>();
         let index = (addr / (PAGE_SIZE * level as u32)) % ENTRIES;
-        self.entries[index] = page;
+        self.entries[index as uint] = page;
         flush_tlb(addr);
     }
 }
@@ -211,7 +212,7 @@ impl<U> Table<U> {
 impl Table<Table<Page>> {
     fn get_page(&self, addr: u32) -> Page {
         let index = addr / (PAGE_SIZE * ENTRIES);
-        match self.entries[index] {
+        match self.entries[index as uint] {
             p if p.present() => unsafe {
                 let table = self.table_at(index);
                 (*table).get(addr)
@@ -229,12 +230,13 @@ impl Table<Table<Page>> {
 
     fn fetch_table(&mut self, addr: u32, flags: Flags) -> *mut PageTable {
         let index = addr / (PAGE_SIZE * ENTRIES);
-        match self.entries[index] {
+        match self.entries[index as uint] {
             p if p.present() => self.table_at(index),
             _ => unsafe {
                 // Allocate table
                 let table_physical = physical::allocate_frame();
-                self.entries[index] = Page::new(table_physical, flags);
+                
+                self.entries[index as uint] = Page::new(table_physical, flags);
 
                 let table = self.table_at(index);
                 // Flush table so we can write to its virtual address
@@ -247,7 +249,7 @@ impl Table<Table<Page>> {
     }
 
     fn table_at(&self, index: u32) -> *mut PageTable {
-        let self_addr: u32 = unsafe { transmute(self as *PageDirectory) };
+        let self_addr: u32 = unsafe { transmute(self as *const PageDirectory) };
         let size = size_of::<PageTable>() as u32;
         let start = self_addr - (ENTRIES - 1) * size;
         (start + index * size) as *mut PageTable

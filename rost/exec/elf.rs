@@ -1,8 +1,6 @@
+use core::prelude::*;
 use core;
 use core::ptr::{copy_nonoverlapping_memory, set_memory};
-use core::option::{Option, Some, None};
-
-use core2::ptr::{offset, mut_offset};
 
 use memory;
 use exec::tasking;
@@ -11,6 +9,7 @@ use exec::tasking;
 static STACK_POSITION: u32 = 0x5600000;
 static STACK_SIZE: u32 = 8 * 1024;
 
+#[allow(dead_code)]
 #[packed]
 struct ELFIdent {
     ei_mag: [u8, ..4],
@@ -22,6 +21,7 @@ struct ELFIdent {
     ei_pad: [u8, ..7]
 }
 
+#[allow(dead_code)]
 #[packed]
 struct ELFHeader {
     e_ident: ELFIdent,
@@ -40,6 +40,7 @@ struct ELFHeader {
     e_shstrndx: u16
 }
 
+#[allow(non_camel_case_types)]
 #[repr(u16)]
 enum ObjectType {
     ET_NONE = 0,
@@ -47,6 +48,7 @@ enum ObjectType {
     ET_EXEC = 2
 }
 
+#[allow(non_camel_case_types)]
 #[repr(u32)]
 enum HeaderType {
     PT_NULL = 0,
@@ -79,14 +81,14 @@ struct ProgramHeader {
     p_flags: HeaderFlags
 }
 
-pub fn probe(buffer: *u8) -> bool {
-    let header = buffer as *ELFHeader;
+pub fn probe(buffer: *const u8) -> bool {
+    let header = buffer as *const ELFHeader;
     unsafe { check_magic(&(*header).e_ident) }
 }
 
-pub fn exec(buffer: *u8) {
+pub fn exec(buffer: *const u8) {
     unsafe {
-        let header = buffer as *ELFHeader;
+        let header = buffer as *const ELFHeader;
 
         setup(buffer, header).map(|entry| {
             memory::map(STACK_POSITION, STACK_SIZE, memory::PRESENT | memory::USER | memory::WRITE);
@@ -97,17 +99,18 @@ pub fn exec(buffer: *u8) {
     }
 }
 
-unsafe fn check_magic(ident: *ELFIdent) -> bool {
+unsafe fn check_magic(ident: *const ELFIdent) -> bool {
     static MAGIC: &'static str = "\u007fELF";
     let ref ei_mag = (*ident).ei_mag;
 
-    ei_mag[0] == MAGIC[0]
-        && ei_mag[1] == MAGIC[1]
-        && ei_mag[2] == MAGIC[2]
-        && ei_mag[3] == MAGIC[3]
+    let magic = MAGIC.as_bytes();
+    ei_mag[0] == magic[0]
+        && ei_mag[1] == magic[1]
+        && ei_mag[2] == magic[2]
+        && ei_mag[3] == magic[3]
 }
-
-unsafe fn setup(buffer: *u8, header: *ELFHeader) -> Option<u32> {
+#[allow(unused_variable)]
+unsafe fn setup(buffer: *const u8, header: *const ELFHeader) -> Option<u32> {
     if (*header).e_type != ET_EXEC as u16 {
         // File is not excutable
         kprintln!("Not executable");
@@ -116,13 +119,14 @@ unsafe fn setup(buffer: *u8, header: *ELFHeader) -> Option<u32> {
 
     let header_count = (*header).e_phnum as int;
     let header_size = (*header).e_phentsize as int;
-    let header_base = offset(buffer, (*header).e_phoff as int);
+    let header_base = buffer.offset((*header).e_phoff as int);
 
     let mut i: int = 0;
     while i < header_count {
-        let program_header = offset(header_base, i * header_size) as *ProgramHeader;
+        let program_header = header_base.offset(i * header_size) as *const ProgramHeader;
 
         // Does this program need an executable stack
+
         let mut exec_stack = true;
 
         match (*program_header).p_type {
@@ -146,7 +150,7 @@ unsafe fn setup(buffer: *u8, header: *ELFHeader) -> Option<u32> {
     Some((*header).e_entry)
 }
 
-unsafe fn load_segment(buffer: *u8, header: *ProgramHeader) {
+unsafe fn load_segment(buffer: *const u8, header: *const ProgramHeader) {
     let mem_size = (*header).p_memsz as uint; // Size in memory
     let file_size = (*header).p_filesz as uint; // Size in file
     let mem_pos = (*header).p_vaddr as *mut u8; // Position in memory
@@ -154,11 +158,11 @@ unsafe fn load_segment(buffer: *u8, header: *ProgramHeader) {
 
     memory::map(mem_pos as u32, mem_size as u32, memory::PRESENT | memory::USER | translate_flags(header));
 
-    copy_nonoverlapping_memory(mem_pos, offset(buffer, file_pos as int), file_size as uint);
-    set_memory(mut_offset(mem_pos, file_pos + file_size as int), 0, mem_size - file_size);
+    copy_nonoverlapping_memory(mem_pos, buffer.offset(file_pos as int), file_size as uint);
+    set_memory(mem_pos.offset(file_pos + file_size as int), 0, mem_size - file_size);
 }
 
-unsafe fn translate_flags(header: *ProgramHeader) -> memory::Flags {
+unsafe fn translate_flags(header: *const ProgramHeader) -> memory::Flags {
     if (*header).p_flags & PT_W {
         memory::WRITE
     } else {

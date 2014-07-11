@@ -1,11 +1,17 @@
-#[crate_id = "rost#0.1"];
+#![crate_id = "rost#0.1"]
+#![crate_type = "staticlib"]
+#![no_std]
+#![no_main]
+#![feature(asm, macro_rules, lang_items, phase, globs, unsafe_destructor)]
 
-#[no_std];
-#[feature(asm, macro_rules)];
+#[phase(plugin, link)]
 
-extern mod core;
+extern crate core;
+extern crate libc;
+extern crate rlibc;
+extern crate alloc;
 
-use core::container::Container;
+use libc::{size_t, c_void, c_int};
 
 mod macros;
 
@@ -14,9 +20,6 @@ mod arch;
 mod drivers;
 mod memory;
 mod exec;
-
-mod core2;
-
 mod util;
 
 #[no_mangle]
@@ -39,7 +42,7 @@ pub extern fn kernel_main() {
 
 fn do_stuff() {
     extern { static _binary_test_fork_elf_start: u8; }
-    let do_nothing = &_binary_test_fork_elf_start as *u8;
+    let do_nothing = &_binary_test_fork_elf_start as *const u8;
 
     if exec::elf::probe(do_nothing) {
         drivers::vga::puts("Found program!\n");
@@ -50,9 +53,45 @@ fn do_stuff() {
     loop {}
 }
 
-
 #[no_mangle]
 pub extern fn trap_handler(regs: &mut arch::idt::Registers) {
     // TODO: Why?
     arch::idt::trap_handler(regs);
 }
+
+// These are for liballoc
+#[no_mangle]
+pub unsafe extern fn malloc(size: size_t) -> *mut c_void {
+    use memory::malloc::malloc;
+    malloc(size)
+}
+
+#[no_mangle]
+pub unsafe extern fn realloc(p: *mut c_void, size: size_t) -> *mut c_void {
+    use memory::malloc::realloc;
+    realloc(p, size)
+}
+
+#[no_mangle]
+pub unsafe extern fn free(p: *mut c_void) {
+    use memory::malloc::free;
+    free(p)
+}
+
+#[no_mangle]
+pub unsafe extern fn posix_memalign(memptr: *mut *mut c_void, align: size_t, size: size_t) -> c_int {
+    kprintln!("Allocating {} bytes with align {}", size, align);
+    *memptr = malloc(size);
+    0
+}
+
+#[lang = "begin_unwind"]
+extern fn begin_unwind(args: &core::fmt::Arguments,
+                       file: &str,
+                       line: uint) -> ! {
+    kprintln!("begin_unwind()");
+    loop {}
+}
+
+#[lang = "stack_exhausted"] extern fn stack_exhausted() {}
+#[lang = "eh_personality"] extern fn eh_personality() {}

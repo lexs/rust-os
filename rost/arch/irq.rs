@@ -30,9 +30,9 @@ pub fn enable(irq: uint) {
     if irq > 7 {
         let actual = irq - 8;
         let curr: u8 = io::read_port(0xA1);
-        io::write_port(0xA1, curr & !((1 << actual) as u8))
+        io::write_port(0xA1, curr & !((1u << actual) as u8))
     } else {
         let curr: u8 = io::read_port(0x21);
-        io::write_port(0x21, curr & !((1 << irq) as u8))
+        io::write_port(0x21, curr & !((1u << irq) as u8))
     }
 }

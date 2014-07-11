@@ -1,4 +1,4 @@
-use core2::ptr::offset;
+use core::prelude::*;
 
 use arch::idt;
 use kernel::console;
@@ -61,7 +61,7 @@ fn syscall_handler(regs: &mut idt::Registers) {
     if index as uint >= NUM_SYSCALLS {
         unimplemented_syscall(regs);
     } else {
-        unsafe { syscalls[index](regs); }
+        unsafe { syscalls[index as uint](regs); }
     }
 }
 
@@ -75,12 +75,12 @@ syscall!(fn syscall_exit(code: u32) {
     tasking::kill();
 })
 
-syscall!(fn syscall_write(fd: u32, data: *u8, len: u32) -> u32 {
+syscall!(fn syscall_write(fd: u32, data: *const u8, len: u32) -> u32 {
     kassert!(fd == 1);
 
     let mut i = 0;
     while i < len {
-        let c = unsafe { *offset(data, i as int) as char };
+        let c = unsafe { *data.offset(i as int) as char };
         console::write_char(c);
 
         i += 1;

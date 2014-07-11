@@ -1,4 +1,4 @@
-#[macro_escape];
+#![macro_escape]
 
 pub mod printf;
 pub mod console;

@@ -3,7 +3,7 @@
 %define MB_MEMORY_INFO 1<<1                         ; provide memory map
 %define MB_FLAGS (MB_PAGE_ALIGN | MB_MEMORY_INFO)   ; this is the Multiboot 'flag' field
 %define MB_MAGIC 0x1BADB002                         ; 'magic number' lets bootloader find the header
- 
+
 ; Multiboot header
 section .multiboot
 align 4
@@ -20,9 +20,9 @@ align 4
 section .bootstrap_stack
 align 4
 stack_bottom:
-times 16384 db 0
+times 16 * 1024 db 0
 stack_top:
- 
+
 section .text
 global _start
 _start:
@@ -31,7 +31,6 @@ _start:
 
     ; Rust functions compare esp against [gs:0x30] as a sort of stack guard thing
     ; as long as we set [gs:0x30] to dword 0, it should be ok
-    ;mov [gs:0x30], dword 0
     mov [gs:0x30], dword stack_bottom
 
     extern kernel_main

@@ -1,4 +1,4 @@
-#[macro_escape];
+#![macro_escape]
 
 // These currently require a "use core;" at the top of the file because macros can't
 // utilize "use" statements.
@@ -10,7 +10,7 @@ macro_rules! define_flags (
     ($name:ident: $t:ty { $($flag:ident = $value:expr),* }) => {
         #[packed]
         pub struct $name {
-            priv flags: $t
+            flags: $t
         }
 
         impl $name {

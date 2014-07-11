@@ -3,7 +3,7 @@ use arch::idt;
 use arch::irq;
 use drivers::vga;
 
-use core2::intrinsics::{volatile_load, volatile_store};
+use core::intrinsics::{volatile_load, volatile_store};
 
 static HZ: u32 = 100;
 
@@ -39,7 +39,7 @@ fn increment_ticks() -> u32 {
 
 pub fn sleep(duration: u32) {
     let target = read_ticks() + duration / 100;
-    while (read_ticks() < target) {}
+    while read_ticks() < target {}
 }
 
 fn timer_handler(_: &mut idt::Registers) {

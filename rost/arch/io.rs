@@ -1,5 +1,5 @@
 #[inline(always)]
-pub fn write_port<T>(port: u16, val: T) {
+pub fn write_port(port: u16, val: u8) {
     unsafe {
         asm!("out $0, $1" :: "{al}"(val), "{dx}"(port) :: "volatile");
     }

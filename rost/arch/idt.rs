@@ -1,4 +1,4 @@
-use core::container::Container;
+use core::prelude::*;
 use core::mem::size_of;
 
 use arch::io;
@@ -16,6 +16,7 @@ static INTERRUPT_GATE: u8 = 0xE;
 static IDT_SIZE: uint = 256;
 type IdtTable = [IdtEntry, ..IDT_SIZE];
 
+#[allow(dead_code)]
 #[packed]
 struct IdtEntry {
     handler_low: u16,
@@ -28,15 +29,16 @@ struct IdtEntry {
 #[packed]
 struct IdtPtr {
     limit: u16,
-    base: *IdtTable
+    base: *const IdtTable
 }
 
+#[allow(dead_code)]
 #[packed]
 pub struct Registers {
-    edi: u32, esi: u32, ebp: u32, esp: u32, ebx: u32, edx: u32, ecx: u32, eax: u32,
-    gs: u32, fs: u32, es: u32, ds: u32,
-    int_no: u32, err_code: u32,
-    eip: u32, cs: u32, eflags: u32, useresp: u32, ss: u32
+    pub edi: u32, pub esi: u32, pub ebp: u32, pub esp: u32, pub ebx: u32, pub edx: u32, pub ecx: u32, pub eax: u32,
+    pub gs: u32, pub fs: u32, pub es: u32, pub ds: u32,
+    pub int_no: u32, pub err_code: u32,
+    pub eip: u32, pub cs: u32, pub eflags: u32, pub useresp: u32, pub ss: u32
 }
 
 impl IdtEntry {
@@ -57,7 +59,7 @@ impl IdtPtr {
     fn new(table: &IdtTable) -> IdtPtr {
         IdtPtr {
             limit: (size_of::<IdtEntry>() * table.len() - 1) as u16,
-            base: table as *IdtTable
+            base: table as *const IdtTable
         }
     }
 }
@@ -74,7 +76,7 @@ static mut entries: IdtTable = [
 
 static mut table: IdtPtr = IdtPtr {
     limit: 0,
-    base: 0 as *IdtTable
+    base: 0 as *const IdtTable
 };
 
 static EXCEPTIONS: &'static [&'static str] = &[
@@ -106,7 +108,7 @@ fn dummy_handler(regs: &mut Registers) {
 }
 
 fn exception_handler(regs: &mut Registers) {
-    panic!("{}, error: {x}", EXCEPTIONS[regs.int_no], regs.err_code);
+    panic!("{}, error: {x}", EXCEPTIONS[regs.int_no as uint], regs.err_code);
 }
 
 static mut interrupt_handlers: [fn(regs: &mut Registers), ..IDT_SIZE] = [
@@ -144,8 +146,7 @@ fn register_handler(which: uint, flags: u8, f: fn(regs: &mut Registers)) {
     }
 }
 
-#[no_mangle]
-pub extern fn trap_handler(regs: &mut Registers) {
+pub fn trap_handler(regs: &mut Registers) {
     unsafe {
         // TODO: Tasking should been initialized before we receive
         // an interrupt
@@ -165,13 +166,13 @@ pub extern fn trap_handler(regs: &mut Registers) {
         io::write_port(0xA0, 0x20); // Slave
     }
 
-    unsafe { interrupt_handlers[which](regs); }
+    unsafe { interrupt_handlers[which as uint](regs); }
 }
 
 unsafe fn idt_enable() {
     asm!("sti");
 }
 
-unsafe fn idt_flush(ptr: *IdtPtr) {
+unsafe fn idt_flush(ptr: *const IdtPtr) {
     asm!("lidt ($0)" :: "r"(ptr));
 }

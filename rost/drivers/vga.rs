@@ -1,7 +1,5 @@
-use core::container::Container;
-
-use core2::ptr::mut_offset;
-use core2::intrinsics::volatile_store;
+use core::prelude::*;
+use core::intrinsics::volatile_store;
 
 use arch::io;
 use util::range;
@@ -48,9 +46,9 @@ static mut cursor_x: uint = 0;
 static mut cursor_y: uint = 0;
 
 pub fn puts(s: &str) {
-    range(0, s.len(), |i| {
-        unsafe { do_putch(s[i] as char); }
-    });
+    for c in s.chars() {
+        unsafe { do_putch(c); }
+    }
 
     unsafe { update_cursor() }
 }
@@ -115,7 +113,7 @@ unsafe fn backspace() {
 #[inline]
 unsafe fn write(y: uint, x: uint, c: Character) {
     let offset = y * COLS + x;
-    volatile_store(mut_offset(screen, offset as int), c);
+    volatile_store(screen.offset(offset as int), c);
 }
 
 unsafe fn forward_cursor(steps: uint) {

@@ -1,30 +1,32 @@
-use core::option::{Option, Some, None};
+use core::prelude::*;
+use alloc::owned::Box;
+
 use core::mem::{transmute, size_of};
 use core::ptr::copy_nonoverlapping_memory;
 
-use core2::list::{List, Node, Rawlink};
-use core2::ptr::mut_offset;
+use util::Unique;
+use util::list::{List, Node, Rawlink};
 
 use arch::{gdt, idt};
 use memory;
 use memory::malloc::malloc;
 
-type KernelStack = [u8, ..STACK_SIZE];
+pub type KernelStack = [u8, ..STACK_SIZE];
 pub struct Task {
-    pid: uint,
-    esp: u32,
-    eip: u32,
-    pd: u32,
-    regs: *mut idt::Registers,
-    kernel_stack: KernelStack
+    pub pid: uint,
+    pub esp: u32,
+    pub eip: u32,
+    pub pd: u32,
+    pub regs: *mut idt::Registers,
+    pub kernel_stack: KernelStack
 }
 
-static STACK_SIZE: u32 = 16 * 1024;
+static STACK_SIZE: uint = 8 * 1024;
 
 static mut next_pid: uint = 1;
-static mut tasks: List<~Task> = List { head: None, tail: Rawlink { p: 0 as *mut Node<~Task> }, length: 0 };
+static mut tasks: List<Unique<Task>> = List { head: None, tail: Rawlink { p: 0 as *mut Node<Unique<Task>> }, length: 0 };
 
-pub static mut current_task: Option<~Task> = None;
+pub static mut current_task: Option<Unique<Task>> = None;
 
 impl Task {
     pub fn stack_top(&self) -> u32 {
@@ -33,16 +35,37 @@ impl Task {
     }
 }
 
+// We can't use the Unique::new() constructor becase it
+// creates the Task on the stack and then copies it into
+// the memory. This fails because this task is actually
+// larger than the stack we're operating on.
+macro_rules! new_task (
+    (Task {
+        pid: $pid:expr,
+        esp: $esp:expr,
+        eip: $eip:expr,
+        pd: $pd:expr,
+        regs: $regs:expr
+
+    }) => ({
+        let mut task: Unique<Task> = Unique::empty();
+        task.pid = $pid;
+        task.eip = $eip;
+        task.pd = $pd;
+        task.regs = $regs;
+        task
+    })
+)
+
 pub fn init() {
     unsafe {
-        let task = ~Task {
+        let mut task = new_task!(Task {
             pid: 0,
             esp: 0,
             eip: 0,
             pd: memory::kernel_directory,
-            regs: 0 as *mut idt::Registers,
-            kernel_stack: [0, ..STACK_SIZE]
-        };
+            regs: 0 as *mut idt::Registers
+        });
 
         gdt::set_kernel_stack(task.stack_top());
 
@@ -50,7 +73,7 @@ pub fn init() {
     }
 }
 
-pub fn get_current_task() -> &mut ~Task {
+pub fn get_current_task() -> &mut Unique<Task> {
     match unsafe { current_task.as_mut() } {
         None => panic!("Tasking not initialized!"),
         Some(task) => task
@@ -63,48 +86,47 @@ pub fn kill() {
             panic!("Can not kill idle task");
         }
 
-        unsafe {
-            let next = tasks.pop_front().get();
-            current_task = Some(next);
-            replace_current(get_current_task());
-        }
+        current_task = tasks.pop_front();
+        replace_current(get_current_task());
     }
 }
 
 pub fn exec(f: fn()) {
     let eip: u32 = unsafe { transmute(f) };
 
-    let p = alloc_stack(STACK_SIZE);
+    let p = alloc_stack(STACK_SIZE as u32);
 
-    let mut new_task = ~Task {
+    let mut new_task = Unique::new(Task {
         pid: aquire_pid(),
         esp: 0,
         eip: eip,
         pd: memory::clone_directory(),
         regs: 0 as *mut idt::Registers, // FIXME
         kernel_stack: [0, ..STACK_SIZE]
-    };
+    });
 
     new_task.esp = new_task.stack_top();
 
     unsafe { tasks.append(new_task); }
 }
 
+
+
 pub fn fork() -> uint {
     unsafe {
         extern { static ret_from_trap: u32; }
 
-        let mut new_task = ~Task {
+        let mut new_task = new_task!(Task {
             pid: aquire_pid(),
             esp: 0,
             eip: transmute(&ret_from_trap),
             pd: memory::clone_directory(),
-            regs: 0 as *mut idt::Registers,
-            kernel_stack: [0, ..STACK_SIZE]
-        };
+            regs: 0 as *mut idt::Registers      
+        });
 
-        let regs = mut_offset(new_task.stack_top() as *mut idt::Registers, -1);
-        copy_nonoverlapping_memory(regs, get_current_task().regs as *idt::Registers, 1);
+        let regs_end = new_task.stack_top() as *mut idt::Registers;
+        let regs = regs_end.offset(-1);
+        copy_nonoverlapping_memory(regs, get_current_task().regs as *const idt::Registers, 1);
 
         new_task.esp = regs as u32;
         (*regs).eax = 0;
@@ -132,6 +154,7 @@ fn read_eflags() -> u32 {
 
 pub fn user_mode(entry: u32, stack: u32) {
     #[packed]
+    #[allow(dead_code)]
     struct FakeStack {
         eip: u32,
         cs: u32,
@@ -162,10 +185,10 @@ pub fn schedule() {
 
         let (last_task, next_task) = match current_task.take() {
             None => panic!("No current task, is tasking initialized?"),
-            Some(current) => unsafe {
+            Some(current) => {
                 tasks.append(current);
                 current_task = Some(task);
-                (tasks.back_mut().get(), current_task.as_ref().get())
+                (tasks.back_mut().unwrap(), current_task.get_ref())
             }
         };
 
@@ -174,16 +197,17 @@ pub fn schedule() {
 }
 
 #[inline(never)] // We can't inline because then the label "resume" would fail to be found
-unsafe fn switch_to(prev: &mut ~Task, next: &~Task) {
+unsafe fn switch_to(prev: &mut Unique<Task>, next: &Unique<Task>) {
     // These blocks are split in two because we need to guarantee that the store
     // into prev.esp and prev.eip happens BEFORE the jmp. Optimally we would like
     // to use "=m" as a constraint but rustc/llvm doesn't seem to like that.
+    // Without the explicit deref_mut() the values are borrowed as immutable.
     asm!(
         "cli;
         push %ebp;
         mov %esp, $0;
         lea resume, $1;"
-        : "=r"(prev.esp), "=r"(prev.eip) ::: "volatile");
+        : "=r"(prev.deref_mut().esp), "=r"(prev.deref_mut().eip) ::: "volatile");
 
     gdt::set_kernel_stack(next.stack_top());
     memory::switch_page_directory(next.pd);
@@ -197,7 +221,7 @@ unsafe fn switch_to(prev: &mut ~Task, next: &~Task) {
        :: "m"(next.esp), "m"(next.eip) :: "volatile");
 }
 
-unsafe fn replace_current(next: &~Task) {
+unsafe fn replace_current(next: &Unique<Task>) {
     asm!(
        "mov $0, %esp;
        jmp *$1;"
