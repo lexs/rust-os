@@ -64,6 +64,14 @@ impl GdtEntry {
             access: access
         }
     }
+
+    fn null() -> GdtEntry {
+        GdtEntry::new(0, 0, 0, 0)
+    }
+
+    fn flat(access: u8, granularity: u8) -> GdtEntry {
+        GdtEntry::new(0, 0xFFFFFFFF, access, granularity)
+    }
 }
 
 impl GdtPtr {
@@ -114,11 +122,11 @@ static mut tss: TssEntry = TssEntry {
 
 pub fn init() {
     unsafe {
-        entries[0] = GdtEntry::new(0, 0, 0, 0); // Null
-        entries[1] = GdtEntry::new(0, 0xFFFFFFFF, CODE, GRANULARITY);
-        entries[2] = GdtEntry::new(0, 0xFFFFFFFF, DATA, GRANULARITY);
-        entries[3] = GdtEntry::new(0, 0xFFFFFFFF, USER | CODE, GRANULARITY);
-        entries[4] = GdtEntry::new(0, 0xFFFFFFFF, USER | DATA, GRANULARITY);
+        entries[0] = GdtEntry::null();
+        entries[1] = GdtEntry::flat(CODE, GRANULARITY);
+        entries[2] = GdtEntry::flat(DATA, GRANULARITY);
+        entries[3] = GdtEntry::flat(USER | CODE, GRANULARITY);
+        entries[4] = GdtEntry::flat(USER | DATA, GRANULARITY);
         entries[5] = write_tss(0x10, 0x0);
 
         table = GdtPtr::new(&entries);
