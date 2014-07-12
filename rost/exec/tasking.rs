@@ -92,25 +92,18 @@ pub fn kill() {
 }
 
 pub fn exec(f: fn()) {
-    let eip: u32 = unsafe { transmute(f) };
-
-    let p = alloc_stack(STACK_SIZE as u32);
-
-    let mut new_task = Unique::new(Task {
+    let mut new_task = new_task!(Task {
         pid: aquire_pid(),
         esp: 0,
-        eip: eip,
+        eip: unsafe { transmute(f) },
         pd: memory::clone_directory(),
-        regs: 0 as *mut idt::Registers, // FIXME
-        kernel_stack: [0, ..STACK_SIZE]
+        regs: 0 as *mut idt::Registers // FIXME  
     });
 
     new_task.esp = new_task.stack_top();
 
     unsafe { tasks.append(new_task); }
 }
-
-
 
 pub fn fork() -> uint {
     unsafe {

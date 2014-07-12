@@ -46,6 +46,7 @@ pub fn write(text: &str, out: |char|) {
     for c in text.chars() {
         out(c);
     }
+    out('\n');
 }
 
 macro_rules! kfmt (
@@ -76,7 +77,6 @@ macro_rules! kfmt (
         )*
 
         write(format.slice_from(i), $out);
-        $out('\n');
     })
 )
 

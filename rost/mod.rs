@@ -37,20 +37,28 @@ pub extern fn kernel_main() {
     drivers::vga::clear_screen();
     drivers::vga::puts("Hello world!\n");
 
-    do_stuff();
+    exec::tasking::exec(do_stuff);
+
+    idle();
 }
 
-fn do_stuff() {
+fn idle() -> ! {
+    loop {
+        exec::tasking::schedule();
+    }   
+}
+
+fn do_stuff() -> ! {
     extern { static _binary_test_fork_elf_start: u8; }
     let do_nothing = &_binary_test_fork_elf_start as *const u8;
 
     if exec::elf::probe(do_nothing) {
-        drivers::vga::puts("Found program!\n");
+        kprintln!("Found program");
 
         exec::elf::exec(do_nothing);
     }
 
-    loop {}
+    panic!();
 }
 
 #[no_mangle]
