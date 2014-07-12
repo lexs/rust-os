@@ -33,7 +33,7 @@ kernel.iso: kernel.elf
 	    ./iso kernel.elf
 
 run: kernel.elf
-	$(QEMU) -kernel kernel.elf
+	$(QEMU) -serial file:serial.log -kernel kernel.elf
 
 runbochs: kernel.iso
 	bochs -q

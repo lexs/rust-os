@@ -6,3 +6,5 @@
 *.embed
 *.bin
 *.iso
+
+serial.log

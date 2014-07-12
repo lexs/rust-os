@@ -6,9 +6,9 @@ pub fn write_port(port: u16, val: u8) {
 }
 
 #[inline(always)]
-pub fn read_port<T>(port: u16) -> T {
+pub fn read_port(port: u16) -> u8 {
     unsafe {
-        let mut val: T;
+        let mut val: u8;
         asm!("in $1, $0" : "={ax}"(val) : "N{dx}"(port) :: "volatile");
         val
     }

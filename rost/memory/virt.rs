@@ -76,6 +76,7 @@ pub fn map(addr: u32, size: u32, flags: Flags) {
 
             let phys_addr = physical::allocate_frame();
             (*table).set(current_addr, phys_addr, flags);
+            klog!("Mapping virtual {x} to physical {x}", current_addr, phys_addr);
 
             current_addr += PAGE_SIZE;
         }

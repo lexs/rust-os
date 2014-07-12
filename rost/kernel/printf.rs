@@ -15,7 +15,7 @@ pub trait Printable {
     fn print(&self, format: Format, out: |char|);
 }
 
-pub fn print_formatted<T : Printable>(format: &str, start: uint, value: T) -> uint {
+pub fn print_formatted<T : Printable>(format: &str, start: uint, value: T, out: |char|) -> uint {
     let mut flags = Default;
 
     let mut i = start;
@@ -30,9 +30,7 @@ pub fn print_formatted<T : Printable>(format: &str, start: uint, value: T) -> ui
         match c {
             'x' => flags = Hex,
             '}' => {
-                value.print(flags, |c| {
-                    write_char(c);
-                });
+                value.print(flags, out);
                 break;
             },
             _ => {
@@ -44,18 +42,20 @@ pub fn print_formatted<T : Printable>(format: &str, start: uint, value: T) -> ui
     i - start
 }
 
-macro_rules! kprintln (
-    ($format:expr) => ({
-        use kernel::console::{write_char, write_str};
+pub fn write(text: &str, out: |char|) {
+    for c in text.chars() {
+        out(c);
+    }
+}
 
-        write_str($format);
-        write_char('\n');
+macro_rules! kfmt (
+    ($format:expr, $out:expr) => ({
+        use kernel::printf::write;
+        write($format, $out);
     });
-    ($format:expr, $($arg:expr),*) => ({
+    ($format:expr, $out:expr, $($arg:expr),*) => ({
         use core::prelude::*;
-
-        use kernel::console::write_char;
-        use kernel::printf::print_formatted;
+        use kernel::printf::{print_formatted, write};
 
         let format: &str = $format;
         let mut i = 0;
@@ -64,24 +64,41 @@ macro_rules! kprintln (
         while i < format.len() {
             match format.char_at(i) {
                 '{' => {
-                    i += print_formatted(format, i, $arg);
+                    i += print_formatted(format, i, $arg, $out);
                     break;
                 },
                 c => {
-                    write_char(c);
+                    $out(c);
                     i += 1;
                 }
             }
         }
         )*
 
-        // Print remaining
-        while i < format.len() {
-            write_char(format.char_at(i));
-            i += 1;
-        }
+        write(format.slice_from(i), $out);
+        $out('\n');
+    })
+)
 
-        write_char('\n');
+macro_rules! kprintln (
+    ($format:expr) => ({
+        use kernel::console::write_char;
+        kfmt!($format, write_char);
+    });
+    ($format:expr, $($arg:expr),*) => ({
+        use kernel::console::write_char;
+        kfmt!($format, write_char, $($arg),*);
+    })
+)
+
+macro_rules! klog (
+    ($format:expr) => ({
+        use kernel::log::write_char;
+        kfmt!($format, write_char);
+    });
+    ($format:expr, $($arg:expr),*) => ({
+        use kernel::log::write_char;
+        kfmt!($format, write_char, $($arg),*);
     })
 )
 

@@ -2,6 +2,7 @@
 
 pub mod printf;
 pub mod console;
+pub mod log;
 
 macro_rules! panic (
     () => ({
