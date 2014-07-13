@@ -29,6 +29,7 @@ struct GdtEntry {
     base_high: u8
 }
 
+#[allow(dead_code)]
 #[packed]
 struct GdtPtr {
     limit: u16,
@@ -131,7 +132,7 @@ pub fn init() {
 
         table = GdtPtr::new(&entries);
 
-        gdt_flush(&table, 0x08, 0x10);
+        gdt_flush(&table);
         tss_flush(0x28 | 0x3);
     }
 }
@@ -170,7 +171,7 @@ fn set_all_segments(dataseg: u16) {
     }
 }
 
-unsafe fn gdt_flush(ptr: *const GdtPtr, codeseg: u16, dataseg: u16) {
+unsafe fn gdt_flush(ptr: *const GdtPtr) {
     asm!("lgdt ($0)" :: "r"(ptr) :: "volatile");
 
     set_all_segments(0x10);

@@ -7,7 +7,7 @@ RUSTC=rustc
 RUSTCFLAGS := -O --cfg debug --target $(TARGET) --debuginfo 2 -L .
 MKISOFS := mkisofs
 CLANG=clang
-CLANGFLAGS = -target $(TARGET) -O2 -ffreestanding
+CLANGFLAGS = -target $(TARGET) -O2 -ffreestanding -Wall
 
 LCORE=libcore-c5ed6fb4-0.11.0-pre.rlib
 LLIBC=liblibc-4f9a876d-0.11.0-pre.rlib

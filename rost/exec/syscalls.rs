@@ -1,9 +1,7 @@
 use core::prelude::*;
 
 use arch::idt;
-use kernel::console;
 use exec::tasking;
-use drivers::timer;
 
 static NUM_SYSCALLS: uint = 128;
 
@@ -81,7 +79,7 @@ syscall!(fn syscall_write(fd: u32, data: *const u8, len: u32) -> u32 {
     let mut i = 0;
     while i < len {
         let c = unsafe { *data.offset(i as int) as char };
-        console::write_char(c);
+        kprint!(c);
 
         i += 1;
     }

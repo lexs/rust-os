@@ -1,8 +1,7 @@
 #![crate_id = "rost#0.1"]
 #![crate_type = "staticlib"]
 #![no_std]
-#![no_main]
-#![feature(asm, macro_rules, lang_items, phase, globs, unsafe_destructor)]
+#![feature(asm, macro_rules, lang_items, phase, globs)]
 
 #[phase(plugin, link)]
 
@@ -21,6 +20,12 @@ mod drivers;
 mod memory;
 mod exec;
 mod util;
+
+mod std {
+    // Macros refer to absolute paths
+    pub use core::fmt;
+    pub use core::option;
+}
 
 #[no_mangle]
 pub extern fn kernel_main() {
@@ -58,9 +63,10 @@ fn do_stuff() -> ! {
         exec::elf::exec(do_nothing);
     }
 
-    panic!();
+    unreachable!();
 }
 
+#[allow(visible_private_types)]
 #[no_mangle]
 pub extern fn trap_handler(regs: &mut arch::idt::Registers) {
     // TODO: Why?
@@ -94,10 +100,10 @@ pub unsafe extern fn posix_memalign(memptr: *mut *mut c_void, align: size_t, siz
 }
 
 #[lang = "begin_unwind"]
-extern fn begin_unwind(args: &core::fmt::Arguments,
+extern fn begin_unwind(_: &core::fmt::Arguments,
                        file: &str,
                        line: uint) -> ! {
-    kprintln!("begin_unwind()");
+    kprintln!("begin_unwind in {}:{}", file, line);
     loop {}
 }
 

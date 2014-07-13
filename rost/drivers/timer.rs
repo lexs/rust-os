@@ -37,6 +37,7 @@ fn increment_ticks() -> u32 {
     }
 }
 
+#[allow(dead_code)]
 pub fn sleep(duration: u32) {
     let target = read_ticks() + duration / 100;
     while read_ticks() < target {}

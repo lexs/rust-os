@@ -1,28 +1,40 @@
 #![macro_escape]
 
-pub mod printf;
 pub mod console;
 pub mod log;
 
-macro_rules! panic (
+macro_rules! kprint(
+    ($text:tt) => (kprint!("{}", $text));
+    ($($arg:tt)*) => (format_args!(::kernel::console::print_args, $($arg)*));
+)
+
+macro_rules! kprintln(
+    ($text:tt) => (kprintln!("{}", $text));
+    ($($arg:tt)*) => (format_args!(::kernel::console::println_args, $($arg)*));
+)
+
+macro_rules! klog(
+    ($text:tt) => (kprint!("{}", $text));
+    ($($arg:tt)*) => (format_args!(::kernel::log::println_args, $($arg)*));
+)
+
+macro_rules! panic(
     () => ({
-        unsafe { asm!("cli"); }
-        loop {}
+        // Avoid warning about unneeded unsafe block
+        fn freeze() -> ! {
+            unsafe { asm!("cli"); }
+            loop {}
+        }
+        freeze();
     });
     ($format:expr) => ({
-        use kernel::console::write_str;
-        write_str("PANIC: ");
+        kprint!("PANIC: ");
         kprintln!($format);
         panic!();
     });
     ($format:expr, $($arg:expr),*) => ({
-        use kernel::console::write_str;
-        write_str("PANIC: ");
+        kprint!("PANIC: ");
         kprintln!($format, $($arg),*);
         panic!();
     })
 )
-
-pub fn panic(msg: &str) {
-    panic!(msg);
-}

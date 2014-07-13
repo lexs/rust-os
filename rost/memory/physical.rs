@@ -4,11 +4,13 @@ static mut next_frame: u32 = 1024 * 4; // First 4MB is in use, TODO: Make this n
 
 
 pub fn init() {
+    /*
     unsafe {
         // Mark frames up to kernel_end as used
         extern { static kernel_end: u32; }
-        //next_frame = kernel_end % FRAME_SIZE + 1;
+        next_frame = kernel_end % FRAME_SIZE + 1;
     }
+    */
 }
 
 pub fn allocate_frame() -> u32 {

@@ -30,6 +30,7 @@ type PageDirectory = Table<PageTable>;
 
 static DIRECTORY: u32 = 0xFFFFF000;
 static DIRECTORY_SECONDARY: u32 = 0xFFBFF000;
+#[allow(dead_code)]
 static PAGES: u32 = 0xFFC00000;
 
 // Temporary virtual addresses useful for mapping in physical pages
@@ -76,12 +77,10 @@ pub fn map(addr: u32, size: u32, flags: Flags) {
 
             let phys_addr = physical::allocate_frame();
             (*table).set(current_addr, phys_addr, flags);
-            klog!("Mapping virtual {x} to physical {x}", current_addr, phys_addr);
+            klog!("Mapping virtual {:x} to physical {:x}", current_addr, phys_addr);
 
             current_addr += PAGE_SIZE;
         }
-
-        let page = (*current_directory).get_page(addr);
     }
 }
 
@@ -153,7 +152,7 @@ fn page_fault(regs: &mut idt::Registers) {
     let user = regs.err_code & 0x4 == 0;
     let reserved = regs.err_code & 0x8 == 0;
 
-    kprintln!("Page fault! ( {}{}{}{}) at {x}",
+    kprintln!("Page fault! ( {}{}{}{}) at {:x}",
         if present { "present " } else { "" },
         if rw { "read-only " } else { "" },
         if user { "user-mode " } else { "" },

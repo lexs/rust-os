@@ -23,6 +23,7 @@ enum Color {
     White
 }
 
+#[allow(dead_code)]
 #[packed]
 struct Character {
     char: u8,

@@ -70,6 +70,7 @@ define_flags!(HeaderFlags: u32 {
     PT_W = 0x4
 })
 
+#[allow(dead_code)]
 #[packed]
 struct ProgramHeader {
     p_type: HeaderType,
@@ -121,13 +122,12 @@ unsafe fn setup(buffer: *const u8, header: *const ELFHeader) -> Option<u32> {
     let header_size = (*header).e_phentsize as int;
     let header_base = buffer.offset((*header).e_phoff as int);
 
+    // Does this program need an executable stack
+    let mut exec_stack = true;
+
     let mut i: int = 0;
     while i < header_count {
         let program_header = header_base.offset(i * header_size) as *const ProgramHeader;
-
-        // Does this program need an executable stack
-
-        let mut exec_stack = true;
 
         match (*program_header).p_type {
             PT_NULL => {}, // Ignore
@@ -145,6 +145,10 @@ unsafe fn setup(buffer: *const u8, header: *const ELFHeader) -> Option<u32> {
         }
 
         i += 1;
+    }
+
+    if exec_stack {
+        klog!("ELF requires executable stack");
     }
 
     Some((*header).e_entry)

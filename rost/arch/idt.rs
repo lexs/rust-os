@@ -25,6 +25,7 @@ struct IdtEntry {
     handler_high: u16
 }
 
+#[allow(dead_code)]
 #[packed]
 struct IdtPtr {
     limit: u16,
@@ -107,7 +108,7 @@ fn dummy_handler(regs: &mut Registers) {
 }
 
 fn exception_handler(regs: &mut Registers) {
-    panic!("{}, error: {x}", EXCEPTIONS[regs.int_no as uint], regs.err_code);
+    panic!("{}, error: {:x}", EXCEPTIONS[regs.int_no as uint], regs.err_code);
 }
 
 static mut interrupt_handlers: [fn(regs: &mut Registers), ..IDT_SIZE] = [

@@ -13,6 +13,7 @@ macro_rules! define_flags (
             flags: $t
         }
 
+        #[allow(dead_code)]
         impl $name {
             fn from_int(value: $t) -> $name {
                 $name { flags: value }
@@ -23,6 +24,7 @@ macro_rules! define_flags (
             }
         }
 
+        #[allow(dead_code)]
         impl core::ops::BitOr<$name, $name> for $name {
             #[inline(always)]
             fn bitor(&self, other: &$name) -> $name {
@@ -30,6 +32,7 @@ macro_rules! define_flags (
             }
         }
 
+        #[allow(dead_code)]
         impl core::ops::BitAnd<$name, bool> for $name {
             #[inline(always)]
             fn bitand(&self, other: &$name) -> bool {
@@ -37,6 +40,7 @@ macro_rules! define_flags (
             }
         }
 
+        #[allow(dead_code)]
         impl core::ops::Not<$name> for $name {
             #[inline(always)]
             fn not(&self) -> $name {
@@ -45,6 +49,7 @@ macro_rules! define_flags (
         }
 
         $(
+            #[allow(dead_code)]
             pub static $flag: $name = $name { flags: $value };
         )+
     };
@@ -54,9 +59,8 @@ macro_rules! define_flags (
 macro_rules! kassert (
     ($condition:expr) => {
         if !($condition) {
-            use kernel::panic;
             let msg = concat!("assert failed: ", stringify!($condition), " at ", file!(), ":", line!());
-            panic(msg);
+            panic!(msg);
         }
     }
 )

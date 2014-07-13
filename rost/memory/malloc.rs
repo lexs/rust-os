@@ -9,6 +9,8 @@ static mut heap: u32 = 0xd0000000;
 static mut buffer: u32 = 0;
 
 pub unsafe fn malloc(size: size_t) -> *mut c_void {
+    klog!("Allocating {} bytes", size);
+
     while buffer < size {
         memory::map(heap + buffer, PAGE_SIZE, memory::PRESENT | memory::WRITE);
         buffer += PAGE_SIZE;
@@ -28,6 +30,6 @@ pub unsafe fn realloc(p: *mut c_void, size: size_t) -> *mut c_void {
     ptr
 }
 
-pub unsafe fn free(p: *mut c_void) {
+pub unsafe fn free(_: *mut c_void) {
     // Do nothing :(
 }

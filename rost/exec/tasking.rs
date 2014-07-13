@@ -1,5 +1,4 @@
 use core::prelude::*;
-use alloc::owned::Box;
 
 use core::mem::{transmute, size_of};
 use core::ptr::copy_nonoverlapping_memory;
@@ -9,7 +8,6 @@ use util::list::{List, Node, Rawlink};
 
 use arch::{gdt, idt};
 use memory;
-use memory::malloc::malloc;
 
 pub type KernelStack = [u8, ..STACK_SIZE];
 pub struct Task {
@@ -130,11 +128,6 @@ pub fn fork() -> uint {
 
         child_pid
     }
-}
-
-pub fn alloc_stack(size: u32) -> u32 {
-    let stack_top: u32 = unsafe { transmute(malloc(size)) };
-    stack_top + size
 }
 
 fn read_eflags() -> u32 {
