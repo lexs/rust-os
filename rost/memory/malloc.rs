@@ -12,7 +12,7 @@ pub unsafe fn malloc(size: size_t) -> *mut c_void {
     klog!("Allocating {} bytes", size);
 
     while buffer < size {
-        memory::map(heap + buffer, PAGE_SIZE, memory::PRESENT | memory::WRITE);
+        memory::map(heap + buffer, PAGE_SIZE, memory::WRITE);
         buffer += PAGE_SIZE;
     }
 

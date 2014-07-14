@@ -1,3 +1,4 @@
+use core::prelude::*;
 use core;
 use core::mem::{transmute, size_of};
 use core::ptr::copy_nonoverlapping_memory;
@@ -14,7 +15,8 @@ define_flags!(Flags: u32 {
     PRESENT  = 1 << 0,
     WRITE    = 1 << 1,
     USER     = 1 << 2,
-    ACCESSED = 1 << 5
+    ACCESSED = 1 << 5,
+    EXEC     = 1 << 7
 })
 
 #[packed]
@@ -70,18 +72,33 @@ pub fn init() {
 }
 
 pub fn map(addr: u32, size: u32, flags: Flags) {
+    let f = translate_flags(flags);
+
     unsafe {
         let mut current_addr = addr;
         while current_addr < addr + size {
-            let table = (*current_directory).fetch_table(current_addr, flags);
+            let table = (*current_directory).fetch_table(current_addr, f);
 
             let phys_addr = physical::allocate_frame();
-            (*table).set(current_addr, phys_addr, flags);
+            (*table).set(current_addr, phys_addr, f);
             klog!("Mapping virtual {:x} to physical {:x}", current_addr, phys_addr);
 
             current_addr += PAGE_SIZE;
         }
     }
+}
+
+fn translate_flags(flags: Flags) -> Flags {
+    // TODO: Have external flags
+    let mut t = flags.clone();
+
+    if t & EXEC {
+        klog!("mmap(): EXEC is currently ignored");
+        t.remove(EXEC);
+    }
+
+    t.insert(PRESENT);
+    t
 }
 
 pub fn clone_directory() -> u32 {

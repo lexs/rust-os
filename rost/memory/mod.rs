@@ -5,9 +5,9 @@ pub use self::virt::{
     switch_page_directory,
     Flags,
     NONE,
-    PRESENT,
     WRITE,
-    USER
+    USER,
+    EXEC
 };
 
 mod physical;

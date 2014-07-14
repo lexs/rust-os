@@ -8,6 +8,7 @@ macro_rules! define_flags (
     };
 
     ($name:ident: $t:ty { $($flag:ident = $value:expr),* }) => {
+        #[deriving(PartialEq, Eq, Clone)]
         #[packed]
         pub struct $name {
             flags: $t
@@ -21,6 +22,14 @@ macro_rules! define_flags (
 
             fn to_int(self) -> $t {
                 self.flags
+            }
+
+            pub fn insert(&mut self, other: $name) {
+                self.flags |= other.flags;
+            }
+
+            pub fn remove(&mut self, other: $name) {
+                self.flags &= !other.flags;
             }
         }
 

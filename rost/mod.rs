@@ -25,6 +25,8 @@ mod std {
     // Macros refer to absolute paths
     pub use core::fmt;
     pub use core::option;
+    pub use core::cmp;
+    pub use core::clone;
 }
 
 #[no_mangle]

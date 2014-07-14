@@ -25,7 +25,7 @@ struct ELFIdent {
 #[packed]
 struct ELFHeader {
     e_ident: ELFIdent,
-    e_type: u16,
+    e_type: ObjectType,
     e_machine: u16,
     e_version: u32,
     e_entry: u32,
@@ -91,10 +91,7 @@ pub fn exec(buffer: *const u8) {
     unsafe {
         let header = buffer as *const ELFHeader;
 
-        setup(buffer, header).map(|entry| {
-            memory::map(STACK_POSITION, STACK_SIZE, memory::PRESENT | memory::USER | memory::WRITE);
-
-            let stack_top = STACK_POSITION + STACK_SIZE;
+        setup(buffer, header).map(|(entry, stack_top)| {
             tasking::user_mode(entry, stack_top)
         });
     }
@@ -102,20 +99,16 @@ pub fn exec(buffer: *const u8) {
 
 unsafe fn check_magic(ident: *const ELFIdent) -> bool {
     static MAGIC: &'static str = "\u007fELF";
-    let ref ei_mag = (*ident).ei_mag;
-
-    let magic = MAGIC.as_bytes();
-    ei_mag[0] == magic[0]
-        && ei_mag[1] == magic[1]
-        && ei_mag[2] == magic[2]
-        && ei_mag[3] == magic[3]
+    (*ident).ei_mag == MAGIC.as_bytes()
 }
-#[allow(unused_variable)]
-unsafe fn setup(buffer: *const u8, header: *const ELFHeader) -> Option<u32> {
-    if (*header).e_type != ET_EXEC as u16 {
-        // File is not excutable
-        kprintln!("Not executable");
-        return None;
+
+unsafe fn setup(buffer: *const u8, header: *const ELFHeader) -> Option<(u32, u32)> {
+    match (*header).e_type {
+        ET_EXEC => (),
+        _ => {
+            kprintln!("Not executable");
+            return None;
+        },
     }
 
     let header_count = (*header).e_phnum as int;
@@ -123,10 +116,9 @@ unsafe fn setup(buffer: *const u8, header: *const ELFHeader) -> Option<u32> {
     let header_base = buffer.offset((*header).e_phoff as int);
 
     // Does this program need an executable stack
-    let mut exec_stack = true;
+    let mut stack_flags = memory::EXEC;
 
-    let mut i: int = 0;
-    while i < header_count {
+    for i in range(0, header_count) {
         let program_header = header_base.offset(i * header_size) as *const ProgramHeader;
 
         match (*program_header).p_type {
@@ -135,23 +127,20 @@ unsafe fn setup(buffer: *const u8, header: *const ELFHeader) -> Option<u32> {
             PT_GNU_STACK => {
                 // We don't need an executable stack if the exec flag is not set
                 if (*program_header).p_flags & !PT_X {
-                    exec_stack = false;
+                    stack_flags.remove(memory::EXEC);
                 }
             },
             other => {
-                kprintln!("Unsupported ELF segment: {}", other as u32);
+                kprintln!("Unsupported ELF segment: 0x{:x}", other as u32);
                 return None;
             }
         }
-
-        i += 1;
     }
 
-    if exec_stack {
-        klog!("ELF requires executable stack");
-    }
+    memory::map(STACK_POSITION, STACK_SIZE, memory::USER | memory::WRITE | stack_flags);
+    let stack_top = STACK_POSITION + STACK_SIZE;
 
-    Some((*header).e_entry)
+    Some(((*header).e_entry, stack_top))
 }
 
 unsafe fn load_segment(buffer: *const u8, header: *const ProgramHeader) {
@@ -160,7 +149,7 @@ unsafe fn load_segment(buffer: *const u8, header: *const ProgramHeader) {
     let mem_pos = (*header).p_vaddr as *mut u8; // Position in memory
     let file_pos = (*header).p_offset as int; // Position in file
 
-    memory::map(mem_pos as u32, mem_size as u32, memory::PRESENT | memory::USER | translate_flags(header));
+    memory::map(mem_pos as u32, mem_size as u32, memory::USER | translate_flags(header));
 
     copy_nonoverlapping_memory(mem_pos, buffer.offset(file_pos as int), file_size as uint);
     set_memory(mem_pos.offset(file_pos + file_size as int), 0, mem_size - file_size);
