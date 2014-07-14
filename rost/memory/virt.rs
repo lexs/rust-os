@@ -1,5 +1,4 @@
 use core::prelude::*;
-use core;
 use core::mem::{transmute, size_of};
 use core::ptr::copy_nonoverlapping_memory;
 
@@ -10,14 +9,18 @@ static PAGE_SIZE: u32 = 0x1000;
 static PAGE_MASK: u32 = 0xFFFFF000;
 static ENTRIES: u32 = 1024;
 
-define_flags!(Flags: u32 {
-    NONE     = 0,
-    PRESENT  = 1 << 0,
-    WRITE    = 1 << 1,
-    USER     = 1 << 2,
-    ACCESSED = 1 << 5,
-    EXEC     = 1 << 7
-})
+bitflags!(
+    #[packed]
+    flags Flags: u32 {
+        static NONE     = 0,
+        static PRESENT  = 1 << 0,
+        static WRITE    = 1 << 1,
+        static USER     = 1 << 2,
+        #[allow(dead_code)]
+        static ACCESSED = 1 << 5,
+        static EXEC     = 1 << 7
+    }
+)
 
 #[packed]
 struct Page(u32);
@@ -92,7 +95,7 @@ fn translate_flags(flags: Flags) -> Flags {
     // TODO: Have external flags
     let mut t = flags.clone();
 
-    if t & EXEC {
+    if t.contains(EXEC) {
         klog!("mmap(): EXEC is currently ignored");
         t.remove(EXEC);
     }
@@ -163,13 +166,13 @@ unsafe fn copy_page(src: u32, dst: u32) {
 
 fn page_fault(regs: &mut idt::Registers) {
     let address = read_faulting_address();
-    let flags = Flags::from_int(regs.err_code);
+    let flags = Flags::from_bits_truncate(regs.err_code);
 
     let reserved = regs.err_code & 0x8 == 0;
     panic!("page fault! ( {}{}{}{}) at 0x{:x}",
-        if flags & PRESENT { "present " } else { "non-present " },
-        if flags & WRITE { "write " } else { " read " },
-        if flags & USER { "user-mode " } else { "kernel-mode " },
+        if flags.contains(PRESENT) { "present " } else { "non-present " },
+        if flags.contains(WRITE) { "write " } else { " read " },
+        if flags.contains(USER) { "user-mode " } else { "kernel-mode " },
         if reserved { "reserved " } else { "" },
         address);
 }
@@ -178,7 +181,7 @@ impl Page {
     fn empty() -> Page { Page(0) }
 
     fn new(addr: u32, flags: Flags) -> Page {
-        Page(addr | flags.to_int())
+        Page(addr | flags.bits())
     }
 
     fn addr(self) -> u32 {
@@ -189,12 +192,12 @@ impl Page {
 
     fn flags(self) -> Flags {
         match self {
-            Page(value) => Flags::from_int(value & !PAGE_MASK)
+            Page(value) => Flags::from_bits_truncate(value)
         }
     }
 
     fn present(self) -> bool {
-        self.flags() & PRESENT
+        self.flags().contains(PRESENT)
     }
 }
 

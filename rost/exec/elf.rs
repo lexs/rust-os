@@ -1,5 +1,4 @@
 use core::prelude::*;
-use core;
 use core::ptr::{copy_nonoverlapping_memory, set_memory};
 
 use memory;
@@ -64,11 +63,15 @@ enum HeaderType {
     PT_GNU_STACK = 0x60000000 + 0x474e551
 }
 
-define_flags!(HeaderFlags: u32 {
-    PT_X = 0x1,
-    PT_R = 0x2,
-    PT_W = 0x4
-})
+bitflags!(
+    #[packed]
+    flags HeaderFlags: u32 {
+        static PT_X = 0x1,
+        #[allow(dead_code)]
+        static PT_R = 0x2,
+        static PT_W = 0x4
+    }
+)
 
 #[allow(dead_code)]
 #[packed]
@@ -126,7 +129,7 @@ unsafe fn setup(buffer: *const u8, header: *const ELFHeader) -> Option<(u32, u32
             PT_LOAD => load_segment(buffer, program_header),
             PT_GNU_STACK => {
                 // We don't need an executable stack if the exec flag is not set
-                if (*program_header).p_flags & !PT_X {
+                if !(*program_header).p_flags.contains(PT_X) {
                     stack_flags.remove(memory::EXEC);
                 }
             },
@@ -156,7 +159,7 @@ unsafe fn load_segment(buffer: *const u8, header: *const ProgramHeader) {
 }
 
 unsafe fn translate_flags(header: *const ProgramHeader) -> memory::Flags {
-    if (*header).p_flags & PT_W {
+    if (*header).p_flags.contains(PT_W) {
         memory::WRITE
     } else {
         memory::NONE

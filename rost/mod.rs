@@ -12,14 +12,16 @@ extern crate alloc;
 
 use libc::{size_t, c_void, c_int};
 
+
 mod macros;
 
 mod kernel;
+mod util;
 mod arch;
 mod drivers;
 mod memory;
 mod exec;
-mod util;
+
 
 mod std {
     // Macros refer to absolute paths
