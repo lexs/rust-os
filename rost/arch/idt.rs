@@ -48,9 +48,7 @@ impl IdtEntry {
             handler_high: ((handler >> 16) & 0xFFFF) as u16,
             selector: selector,
             always0: 0,
-            // We must uncomment the OR below when we get to using user-mode.
-            // It sets the interrupt gate's privilege level to 3.
-            flags: flags //| USER
+            flags: flags
         }
     }
 }

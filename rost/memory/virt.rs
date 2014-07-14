@@ -146,20 +146,15 @@ unsafe fn copy_page(src: u32, dst: u32) {
 
 fn page_fault(regs: &mut idt::Registers) {
     let address = read_faulting_address();
+    let flags = Flags::from_int(regs.err_code);
 
-    let present = regs.err_code & 0x1 != 0;
-    let rw = regs.err_code & 0x2 == 0;
-    let user = regs.err_code & 0x4 == 0;
     let reserved = regs.err_code & 0x8 == 0;
-
-    kprintln!("Page fault! ( {}{}{}{}) at {:x}",
-        if present { "present " } else { "" },
-        if rw { "read-only " } else { "" },
-        if user { "user-mode " } else { "" },
+    panic!("page fault! ( {}{}{}{}) at 0x{:x}",
+        if flags & PRESENT { "present " } else { "non-present " },
+        if flags & WRITE { "write " } else { " read " },
+        if flags & USER { "user-mode " } else { "kernel-mode " },
         if reserved { "reserved " } else { "" },
         address);
-
-    loop {}
 }
 
 impl Page {

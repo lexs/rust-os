@@ -100,11 +100,10 @@ pub unsafe extern fn posix_memalign(memptr: *mut *mut c_void, align: size_t, siz
 }
 
 #[lang = "begin_unwind"]
-extern fn begin_unwind(_: &core::fmt::Arguments,
+extern fn begin_unwind(args: &core::fmt::Arguments,
                        file: &str,
                        line: uint) -> ! {
-    kprintln!("begin_unwind in {}:{}", file, line);
-    loop {}
+    panic!("{} in {}:{}", args, file, line);
 }
 
 #[lang = "stack_exhausted"] extern fn stack_exhausted() {}
