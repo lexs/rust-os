@@ -3,27 +3,25 @@ use core::intrinsics::volatile_store;
 
 use arch::io;
 
-#[repr(u8)]
-enum Color {
-    Black,
-    Blue,
-    Green,
-    Cyan,
-    Red,
-    Pink,
-    Brown,
-    LightGray,
-    DarkGray,
-    LightBlue,
-    LightGreen,
-    LightCyan,
-    LightRed,
-    LightPink,
-    Yellow,
-    White
-}
+bitflags!(
+    #[packed]
+    flags Color: u8 {
+        static BRIGHT = 1 << 3,
 
-#[allow(dead_code)]
+        static BLACK = 0,
+
+        static RED = 1 << 2,
+        static GREEN = 1 << 1,
+        static BLUE = 1 << 0,
+
+        static CYAN = BLUE.bits | GREEN.bits,
+        static MAGENTA = BLUE.bits | RED.bits,
+        static BROWN = GREEN.bits | RED.bits,
+
+        static WHITE = BLUE.bits | GREEN.bits | RED.bits
+    }
+)
+
 #[packed]
 struct Character {
     char: u8,
@@ -33,7 +31,7 @@ struct Character {
 impl Character {
     #[inline]
     fn make(c: char, fg: Color, bg: Color) -> Character {
-        Character { char: c as u8, attr: fg as u8 | bg as u8 << 4 }
+        Character { char: c as u8, attr: fg.bits() | bg.bits() << 4 }
     }
 }
 
@@ -67,10 +65,14 @@ pub fn putch(c: char) {
 pub fn clear_screen() {
     for x in range(0, COLS) {
         for y in range(0, ROWS) {
-            unsafe { write(y, x, Character::make(' ', White, Black)); }
+            unsafe { write(y, x, Character::make(' ', WHITE, BLACK)); }
         }
     }
     move_cursor(0, 0);
+}
+
+pub fn get_cursor() -> (uint, uint) {
+    unsafe { (cursor_x, cursor_y) }
 }
 
 pub fn move_cursor(x: uint, y: uint) {
@@ -81,13 +83,23 @@ pub fn move_cursor(x: uint, y: uint) {
     }
 }
 
+static mut fg: Color = WHITE;
+static mut bg: Color = BLACK;
+
+pub fn set_color(_fg: Color, _bg: Color) {
+    unsafe {
+        fg = _fg;
+        bg = _bg;
+    }
+}
+
 unsafe fn do_putch(c: char) {
     match c {
         '\n' => newline(),
         '\t' => tab(),
         '\u0008' => backspace(),
         _ => {
-            write(cursor_y, cursor_x, Character::make(c, White, Black));
+            write(cursor_y, cursor_x, Character::make(c, fg, bg));
             forward_cursor(1);
         }
     }
@@ -105,7 +117,7 @@ unsafe fn backspace() {
         cursor_y -= 1;
     }
 
-    write(cursor_y, cursor_x, Character::make(' ', White, Black));
+    write(cursor_y, cursor_x, Character::make(' ', WHITE, BLACK));
 }
 
 #[inline]

@@ -26,6 +26,7 @@ mod exec;
 mod std {
     // Macros refer to absolute paths
     pub use core::fmt;
+    pub use core::num;
     pub use core::option;
     pub use core::cmp;
     pub use core::clone;
@@ -43,8 +44,12 @@ pub extern fn kernel_main() {
 
     exec::syscalls::init();
 
+    kernel::console::init();
+
     drivers::vga::clear_screen();
-    drivers::vga::puts("Hello world!\n");
+    kprintln!("\x1b[33;1mWelcome to \x1b[0;30;47mROST\x1b[0;33;1m v0.1\x1b[m");
+    kprint!("Testing colors: ")
+    kprintln!("\x1b[31;1mRED\x1b[32;1mGREEN\x1b[33;1mBROWN\x1b[34;1mBLUE\x1b[35;1mMAGENTA\x1b[36;1mCYAN\x1b[37;1mWHITE\x1b[m");
 
     exec::tasking::exec(do_stuff);
 

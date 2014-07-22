@@ -74,12 +74,13 @@ syscall!(fn syscall_exit(code: u32) {
 })
 
 syscall!(fn syscall_write(fd: u32, data: *const u8, len: u32) -> u32 {
+    use kernel::console::AnsiConsole;
     kassert!(fd == 1);
 
     let mut i = 0;
     while i < len {
         let c = unsafe { *data.offset(i as int) as char };
-        kprint!(c);
+        AnsiConsole.print(c);
 
         i += 1;
     }
