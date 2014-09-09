@@ -193,20 +193,16 @@ impl State {
         };
 
         match value {
-            SGR_RESET => {
-                *self = State::default();
-            },
-            SGR_BOLD => self.flags.insert(BRIGHT),
-            SGR_UNDERLINE => self.flags.insert(UNDERLINE),
-            SGR_BLINK => self.flags.insert(BLINK),
-            SGR_REVERSE => swap(&mut self.fg, &mut self.bg),
+            SGR_RESET               => *self = State::default(),
+            SGR_BOLD                => self.flags.insert(BRIGHT),
+            SGR_UNDERLINE           => self.flags.insert(UNDERLINE),
+            SGR_BLINK               => self.flags.insert(BLINK),
+            SGR_REVERSE             => swap(&mut self.fg, &mut self.bg),
             SGR_FG_LOW..SGR_FG_HIGH => self.fg = fg(value - SGR_FG_LOW),
-            SGR_FG_RESET => self.fg = White,
+            SGR_FG_RESET            => self.fg = White,
             SGR_BG_LOW..SGR_BG_HIGH => self.bg = bg(value - SGR_BG_LOW),
-            SGR_BG_RESET => self.bg = Black,
-            _ => {
-
-            }
+            SGR_BG_RESET            => self.bg = Black,
+            _                       => ()
         }
     }
 }
